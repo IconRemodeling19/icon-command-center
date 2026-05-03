@@ -80,23 +80,17 @@ function ReturnHomeButton() {
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 'auto',
+        position: 'relative',
         width: '100%',
         height: '36px',
-        transform: 'none',
-        zIndex: 999999,
+        boxSizing: 'border-box',
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        padding: '0 0 0 16px',
+        paddingLeft: '16px',
         background: 'rgba(10,12,18,0.95)',
         border: 'none',
         borderBottom: '1px solid #C9A84C',
-        borderRadius: 0,
         color: hov ? '#E8192C' : '#ffffff',
         fontSize: '12px',
         fontWeight: 700,
@@ -485,8 +479,10 @@ export default function IconCommandCenter() {
   const handleAdd = assignee => setEditing({ title: '', customer: '', assignee: assignee || 'robert', category: 'customer', priority: 'medium', dueDate: 'Today' });
 
   return (
+    <>
+    <ReturnHomeButton />
     <div style={{
-      minHeight: '100vh', height: '100vh', overflow: 'hidden',
+      minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)', overflow: 'hidden',
       background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
       color: '#f4f4f5', display: 'flex', flexDirection: 'column',
       fontFamily: FB, position: 'relative',
@@ -596,8 +592,7 @@ export default function IconCommandCenter() {
         />
       )}
 
-      {/* ── RETURN TO OPERATIONS CENTER ── */}
-      <ReturnHomeButton />
     </div>
+    </>
   );
 }
