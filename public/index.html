@@ -35,12 +35,25 @@
       <span class="op-label">Operations Center</span>
     </a>
     <style>
-      #op-center-home-btn{position:fixed;top:8px;left:8px;z-index:99999;display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:8px 12px;background:rgba(10,12,18,.92);color:#fff;text-decoration:none;font:600 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;border:1px solid #C9A84C;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.35);transition:color .15s,border-color .15s;}
-      #op-center-home-btn:hover,#op-center-home-btn:focus{color:#E8192C;border-color:#E8192C;outline:none;}
-      #op-center-home-btn .op-arrow{font-size:16px;line-height:1;}
-      @media print{#op-center-home-btn{display:none!important;}}
-      @media (max-width:380px){#op-center-home-btn .op-label{display:none;}#op-center-home-btn{padding:8px 10px;}}
-      @media (max-width:768px){#op-center-home-btn{font-size:11px!important;padding:5px 8px!important;opacity:.9;top:4px;left:4px;}}
+      #op-center-home-btn, .ops-center-home-btn, a[aria-label="Return to Operations Center"] {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        top: auto !important;
+        z-index: 999999 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 10px 20px !important;
+        background: rgba(10,12,18,0.95) !important;
+        border: 1px solid #C9A84C !important;
+        border-radius: 25px !important;
+        color: #ffffff !important;
+        font-size: 13px !important;
+        text-decoration: none !important;
+        white-space: nowrap !important;
+      }
     </style>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
