@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
-  Plus, X, Check, Trash2, AlertTriangle, Hash
+  Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft
 } from 'lucide-react';
 
 // ─── Team & Config ─────────────────────────────────────────────────────────────
@@ -69,6 +69,34 @@ const FB = "'Manrope', 'Segoe UI', Arial, sans-serif";
 const FM = "'JetBrains Mono', 'Consolas', monospace";
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
+
+function ReturnHomeButton() {
+  const [hov, setHov] = useState(false);
+  return (
+    <a
+      href="https://icon-operations-center.vercel.app"
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: 'fixed', top: '12px', left: '12px', zIndex: 9999,
+        display: 'inline-flex', alignItems: 'center', gap: '6px',
+        minHeight: '44px', padding: '6px 12px',
+        background: 'rgba(9,9,11,0.92)',
+        border: `1px solid ${hov ? '#E8192C' : '#C9A84C'}`,
+        borderRadius: '6px',
+        color: hov ? '#E8192C' : '#ffffff',
+        fontSize: '12px', fontWeight: 700, fontFamily: FB,
+        letterSpacing: '0.06em', textTransform: 'uppercase',
+        textDecoration: 'none', cursor: 'pointer',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+        transition: 'color 0.15s, border-color 0.15s',
+      }}
+    >
+      <ArrowLeft size={14} strokeWidth={2.5} />
+      <span>Operations Center</span>
+    </a>
+  );
+}
 
 function StatBlock({ label, value, tone }) {
   const colors = { red: '#f87171', amber: '#fbbf24', zinc: '#f4f4f5', emerald: '#34d399' };
@@ -550,6 +578,9 @@ export default function IconCommandCenter() {
           onClose={() => setEditing(null)}
         />
       )}
+
+      {/* ── RETURN TO OPERATIONS CENTER ── */}
+      <ReturnHomeButton />
     </div>
   );
 }
