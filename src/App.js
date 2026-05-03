@@ -76,19 +76,32 @@ function ReturnHomeButton() {
     <a
       id="op-center-home-btn"
       href="https://icon-operations-center.vercel.app"
+      aria-label="Return to Operations Center"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        position: 'fixed', top: '12px', left: '12px', zIndex: 99999,
-        display: 'inline-flex', alignItems: 'center', gap: '6px',
-        minHeight: '44px', padding: '6px 12px',
-        background: 'rgba(9,9,11,0.92)',
+        position: 'fixed',
+        bottom: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        top: 'auto',
+        zIndex: 999999,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '10px 20px',
+        background: 'rgba(10,12,18,0.95)',
         border: `1px solid ${hov ? '#E8192C' : '#C9A84C'}`,
-        borderRadius: '6px',
+        borderRadius: '25px',
         color: hov ? '#E8192C' : '#ffffff',
-        fontSize: '12px', fontWeight: 700, fontFamily: FB,
-        letterSpacing: '0.06em', textTransform: 'uppercase',
-        textDecoration: 'none', cursor: 'pointer',
+        fontSize: '13px',
+        fontWeight: 700,
+        fontFamily: FB,
+        letterSpacing: '0.06em',
+        textTransform: 'uppercase',
+        textDecoration: 'none',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
         boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
         transition: 'color 0.15s, border-color 0.15s',
       }}
