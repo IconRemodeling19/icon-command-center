@@ -74,11 +74,12 @@ function ReturnHomeButton() {
   const [hov, setHov] = useState(false);
   return (
     <a
+      id="op-center-home-btn"
       href="https://icon-operations-center.vercel.app"
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
-        position: 'fixed', top: '12px', left: '12px', zIndex: 9999,
+        position: 'fixed', top: '12px', left: '12px', zIndex: 99999,
         display: 'inline-flex', alignItems: 'center', gap: '6px',
         minHeight: '44px', padding: '6px 12px',
         background: 'rgba(9,9,11,0.92)',
