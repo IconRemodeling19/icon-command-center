@@ -228,12 +228,12 @@ function TaskCard({ task, onEdit, onComplete }) {
   );
 }
 
-function PersonColumn({ person, tasks, onAdd, onEdit, onComplete }) {
+function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
   const acc = ACCENTS[person.accent];
   const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
 
   return (
-    <div style={{
+    <div className="cc-column" style={{
       display: 'flex', flexDirection: 'column',
       background: '#09090b', border: '1px solid rgba(39,39,42,0.85)',
       borderRadius: '8px', overflow: 'hidden',
@@ -244,16 +244,24 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete }) {
         padding: '12px 16px', borderBottom: '1px solid #27272a',
         background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div
+          onClick={onFocus}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px',
+            cursor: onFocus ? 'pointer' : 'default',
+            flex: 1, minWidth: 0,
+          }}
+        >
           <div style={{
             width: '10px', height: '10px', borderRadius: '50%',
             background: acc.dot, boxShadow: `0 0 0 4px ${acc.ring}`,
+            flexShrink: 0,
           }} />
-          <div>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {person.name}
             </div>
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '4px', fontFamily: FB }}>
+            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '4px', fontFamily: FB, whiteSpace: 'nowrap' }}>
               {person.role}
             </div>
           </div>
@@ -422,6 +430,10 @@ export default function IconCommandCenter() {
   const [tasks, setTasks] = useState(INITIAL_TASKS);
   const [doneToday, setDoneToday] = useState(4);
   const [editing, setEditing] = useState(null);
+  const [focusedPerson, setFocusedPerson] = useState(null);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
 
   // Load fonts + inject keyframe animations
   useEffect(() => {
@@ -439,6 +451,33 @@ export default function IconCommandCenter() {
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
       html, body { margin: 0; padding: 0; height: 100%; background: #080c12; }
+
+      @media (max-width: 768px) {
+        .cc-main {
+          display: flex !important;
+          flex-direction: row !important;
+          overflow-x: auto !important;
+          overflow-y: hidden !important;
+          scroll-snap-type: x mandatory;
+          -webkit-overflow-scrolling: touch;
+          gap: 12px !important;
+          padding: 12px !important;
+        }
+        .cc-column {
+          min-width: 85vw;
+          flex: 0 0 85vw;
+          scroll-snap-align: start;
+        }
+        .cc-main.cc-focused {
+          flex-direction: column !important;
+          overflow-x: hidden !important;
+        }
+        .cc-main.cc-focused .cc-column {
+          min-width: 100% !important;
+          flex: 1 1 auto !important;
+          min-height: 0;
+        }
+      }
     `;
     document.head.appendChild(style);
 
@@ -447,6 +486,18 @@ export default function IconCommandCenter() {
       try { document.head.removeChild(style); } catch (e) {}
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = e => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) setFocusedPerson(null);
+  }, [isMobile]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -534,21 +585,42 @@ export default function IconCommandCenter() {
       </header>
 
       {/* ── 3-COLUMN MAIN ── */}
-      <main style={{
-        position: 'relative', flex: 1, minHeight: 0,
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-        gap: '16px', padding: '16px 24px', overflow: 'hidden',
-      }}>
-        {TEAM.map(person => (
-          <PersonColumn
-            key={person.id}
-            person={person}
-            tasks={tasksByPerson[person.id] || []}
-            onAdd={handleAdd}
-            onEdit={setEditing}
-            onComplete={handleComplete}
-          />
-        ))}
+      <main
+        className={`cc-main ${focusedPerson && isMobile ? 'cc-focused' : ''}`}
+        style={{
+          position: 'relative', flex: 1, minHeight: 0,
+          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+          gap: '16px', padding: '16px 24px', overflow: 'hidden',
+        }}
+      >
+        {focusedPerson && isMobile && (
+          <button
+            onClick={() => setFocusedPerson(null)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '8px 14px', alignSelf: 'flex-start', flexShrink: 0,
+              background: 'rgba(24,24,27,0.95)', border: '1px solid #3f3f46',
+              borderRadius: '6px', color: '#f4f4f5', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 700, fontFamily: FB,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+            }}
+          >
+            <ArrowLeft size={14} strokeWidth={2.5} /> Back
+          </button>
+        )}
+        {TEAM
+          .filter(p => !(focusedPerson && isMobile) || focusedPerson === p.id)
+          .map(person => (
+            <PersonColumn
+              key={person.id}
+              person={person}
+              tasks={tasksByPerson[person.id] || []}
+              onAdd={handleAdd}
+              onEdit={setEditing}
+              onComplete={handleComplete}
+              onFocus={isMobile ? () => setFocusedPerson(person.id) : undefined}
+            />
+          ))}
       </main>
 
       {/* ── FOOTER ── */}
