@@ -183,13 +183,13 @@ function TaskCard({ task, onEdit, onComplete }) {
             onClick={e => { e.stopPropagation(); onComplete(task.id); }}
             title="Mark complete"
             style={{
-              opacity: hov ? 1 : 0, width: '24px', height: '24px', borderRadius: '50%',
+              opacity: hov ? 1 : 0, width: '44px', height: '44px', borderRadius: '50%',
               border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'opacity 0.15s',
+              transition: 'opacity 0.15s', flexShrink: 0,
             }}
           >
-            <Check size={12} color="#34d399" />
+            <Check size={16} color="#34d399" />
           </button>
         </div>
 
@@ -289,13 +289,13 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
             onClick={() => onAdd(person.id)}
             title="Add task"
             style={{
-              width: '28px', height: '28px', borderRadius: '6px',
+              width: '44px', height: '44px', borderRadius: '6px',
               border: '1px solid #3f3f46', background: 'transparent',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#a1a1aa',
+              color: '#a1a1aa', flexShrink: 0,
             }}
           >
-            <Plus size={14} />
+            <Plus size={18} />
           </button>
         </div>
       </div>
@@ -318,7 +318,7 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
 
 const inputStyle = {
   width: '100%', background: '#09090b', border: '1px solid #3f3f46',
-  borderRadius: '6px', padding: '9px 12px', fontSize: '13px',
+  borderRadius: '6px', padding: '12px 14px', minHeight: '44px', fontSize: '16px',
   color: '#f4f4f5', fontFamily: FB, outline: 'none', boxSizing: 'border-box',
 };
 
@@ -355,7 +355,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           <span style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.06em' }}>
             {isNew ? 'NEW TASK' : 'EDIT TASK'}
           </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}>
             <X size={20} />
           </button>
         </div>
@@ -395,23 +395,23 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid #27272a' }}>
           {!isNew ? (
-            <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', fontFamily: FB }}>
-              <Trash2 size={13} /> Delete
+            <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
+              <Trash2 size={14} /> Delete
             </button>
           ) : <div />}
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '13px', fontWeight: 600, fontFamily: FB }}>
+            <button onClick={onClose} style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}>
               Cancel
             </button>
             <button
               onClick={() => canSave && onSave(form)}
               style={{
-                padding: '8px 20px',
+                padding: '12px 20px', minHeight: '44px',
                 background: canSave ? '#f59e0b' : '#27272a',
                 border: 'none', borderRadius: '6px',
                 cursor: canSave ? 'pointer' : 'not-allowed',
                 color: canSave ? '#09090b' : '#52525b',
-                fontSize: '13px', fontWeight: 700,
+                fontSize: '14px', fontWeight: 700,
                 letterSpacing: '0.06em', fontFamily: FB,
               }}
             >
@@ -598,14 +598,14 @@ export default function IconCommandCenter() {
             onClick={() => setFocusedPerson(null)}
             style={{
               display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 14px', alignSelf: 'flex-start', flexShrink: 0,
+              padding: '12px 16px', minHeight: '44px', alignSelf: 'flex-start', flexShrink: 0,
               background: 'rgba(24,24,27,0.95)', border: '1px solid #3f3f46',
               borderRadius: '6px', color: '#f4f4f5', cursor: 'pointer',
-              fontSize: '13px', fontWeight: 700, fontFamily: FB,
+              fontSize: '14px', fontWeight: 700, fontFamily: FB,
               letterSpacing: '0.06em', textTransform: 'uppercase',
             }}
           >
-            <ArrowLeft size={14} strokeWidth={2.5} /> Back
+            <ArrowLeft size={16} strokeWidth={2.5} /> Back
           </button>
         )}
         {TEAM
