@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
-  Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft
+  Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin
 } from 'lucide-react';
+import { db, authReady, ref, onValue, set, update, remove, push } from './firebase';
+
+const TASKS_PATH = 'commandCenter/tasks';
 
 // ─── Team & Config ─────────────────────────────────────────────────────────────
 
@@ -71,33 +74,6 @@ const isDueWithinNextDay = (s) => {
 };
 
 const dateSortKey = (s) => isISODate(s) ? s : '9999-12-31'; // legacy sinks to bottom
-
-// ─── Sample Data ───────────────────────────────────────────────────────────────
-
-const INITIAL_TASKS = [
-  // Robert
-  { id: 1,  title: 'Sign change order — Patel bathroom remodel',   customer: 'Patel — Cedar Ln',       assignee: 'robert', category: 'contract',   priority: 'urgent', dueDate: 'Today 4:00 PM'    },
-  { id: 2,  title: 'Call Henderson re: kitchen scope expansion',    customer: 'Henderson — Maple St',   assignee: 'robert', category: 'customer',   priority: 'high',   dueDate: 'Today'            },
-  { id: 3,  title: 'Final walkthrough — Williams kitchen',          customer: 'Williams — Birchwood',   assignee: 'robert', category: 'inspection', priority: 'high',   dueDate: 'Tomorrow 9:00 AM' },
-  { id: 4,  title: 'Meet city inspector at 412 Maple St',           customer: 'Henderson — Maple St',   assignee: 'robert', category: 'permit',     priority: 'medium', dueDate: 'Thu 10:00 AM'     },
-  { id: 5,  title: 'Approve Q2 marketing budget proposal',          customer: 'Internal',               assignee: 'robert', category: 'finance',    priority: 'medium', dueDate: 'May 5'            },
-  { id: 6,  title: 'Sign loan paperwork — new F-250',               customer: 'Internal',               assignee: 'robert', category: 'finance',    priority: 'low',    dueDate: 'May 8'            },
-  // Joe
-  { id: 7,  title: 'File building permit — Chen addition',          customer: 'Chen — Oakwood Dr',      assignee: 'joe',    category: 'permit',     priority: 'urgent', dueDate: 'Today'            },
-  { id: 8,  title: 'Send revised contract to Mrs. Rodriguez',       customer: 'Rodriguez — Pine Ridge', assignee: 'joe',    category: 'contract',   priority: 'high',   dueDate: 'Today 2:00 PM'    },
-  { id: 9,  title: 'Process payroll — period 04/15–04/30',          customer: 'Internal',               assignee: 'joe',    category: 'finance',    priority: 'high',   dueDate: 'Friday'           },
-  { id: 10, title: 'Reconcile QuickBooks — March close',            customer: 'Internal',               assignee: 'joe',    category: 'finance',    priority: 'high',   dueDate: 'May 3'            },
-  { id: 11, title: 'Update vendor insurance certificates',          customer: 'Internal',               assignee: 'joe',    category: 'contract',   priority: 'medium', dueDate: 'May 5'            },
-  { id: 12, title: 'Schedule dumpster pickup — Oak Ave job',        customer: 'Becker — Oak Ave',       assignee: 'joe',    category: 'field',      priority: 'medium', dueDate: 'May 4'            },
-  { id: 13, title: 'Order business cards for Bryan',                customer: 'Internal',               assignee: 'joe',    category: 'finance',    priority: 'low',    dueDate: 'May 10'           },
-  // Bryan
-  { id: 14, title: 'Coordinate electrician — Becker basement',     customer: 'Becker — Oak Ave',       assignee: 'bryan',  category: 'field',      priority: 'urgent', dueDate: 'Today 7:00 AM'    },
-  { id: 15, title: 'Site measurement visit — Thompson property',    customer: 'Thompson — Hilltop',     assignee: 'bryan',  category: 'field',      priority: 'high',   dueDate: 'Today 1:00 PM'    },
-  { id: 16, title: 'Punch list walkthrough w/ subs — Cedar Ln',    customer: 'Patel — Cedar Ln',       assignee: 'bryan',  category: 'inspection', priority: 'high',   dueDate: 'Tomorrow'         },
-  { id: 17, title: 'Schedule HVAC rough-in inspection',             customer: 'Chen — Oakwood Dr',      assignee: 'bryan',  category: 'inspection', priority: 'medium', dueDate: 'May 5'            },
-  { id: 18, title: 'Pickup tile order — Floor & Decor',             customer: 'Williams — Birchwood',   assignee: 'bryan',  category: 'field',      priority: 'medium', dueDate: 'May 3'            },
-  { id: 19, title: 'Drop off updated plans w/ framing crew',        customer: 'Williams — Birchwood',   assignee: 'bryan',  category: 'field',      priority: 'medium', dueDate: 'May 3'            },
-];
 
 // ─── Fonts ─────────────────────────────────────────────────────────────────────
 
@@ -291,10 +267,20 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
         )}
 
         {/* Customer */}
-        <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FB }}>
-          <Hash size={11} color="#52525b" />
-          {task.customer}
-        </div>
+        {task.customer && (
+          <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: task.address ? '4px' : '10px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FB }}>
+            <Hash size={11} color="#52525b" />
+            {task.customer}
+          </div>
+        )}
+
+        {/* Address */}
+        {task.address && (
+          <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '5px', fontFamily: FB }}>
+            <MapPin size={11} color="#52525b" style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span style={{ wordBreak: 'break-word' }}>{task.address}</span>
+          </div>
+        )}
 
         {/* Sub tasks */}
         {subTasks.length > 0 && (
@@ -514,6 +500,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
   const [form, setForm] = useState({
     ...task,
     dueDate: initialDueDate,
+    address: task.address || '',
     subTasks: task.subTasks || [],
     completionNotes: task.completionNotes || '',
   });
@@ -539,6 +526,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
       ...form,
       title: (form.title || '').toUpperCase(),
       customer: (form.customer || '').toUpperCase(),
+      address: (form.address || '').toUpperCase(),
       completionNotes: (form.completionNotes || '').toUpperCase(),
       subTasks: (form.subTasks || [])
         .filter(s => (s.text || '').trim().length > 0)
@@ -565,6 +553,15 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
             type="text" value={form.customer}
             onChange={e => setForm({ ...form, customer: e.target.value })}
             placeholder="E.G. SMITH — MAPLE ST (OR INTERNAL)"
+            spellCheck={true}
+            style={upperInputStyle}
+          />
+        </Field>
+        <Field label="Address">
+          <input
+            type="text" value={form.address || ''}
+            onChange={e => setForm({ ...form, address: e.target.value })}
+            placeholder="E.G. 412 MAPLE ST, PLEASANTVILLE NY"
             spellCheck={true}
             style={upperInputStyle}
           />
@@ -771,8 +768,12 @@ function CompletedTasksModal({ person, completedToday, onClose }) {
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function IconCommandCenter() {
-  const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [completedTasks, setCompletedTasks] = useState([]);
+  // Single source of truth — every task in commandCenter/tasks/{id}, with
+  // status: 'open' | 'done'. Open tasks render in columns; done tasks are
+  // surfaced through the per-person Done Today modal.
+  const [allTasks, setAllTasks] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(null);
   const [viewingNotes, setViewingNotes] = useState(null);
   const [viewingDoneFor, setViewingDoneFor] = useState(null);
@@ -781,6 +782,45 @@ export default function IconCommandCenter() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   );
+
+  // ── Firebase subscription ────────────────────────────────────────────────
+  // Wait for anonymous auth, then keep allTasks live-synced from RTDB.
+  // The cancelled flag protects against the auth promise resolving after
+  // the component unmounts.
+  useEffect(() => {
+    let cancelled = false;
+    let unsub = () => {};
+    authReady.then(() => {
+      if (cancelled) return;
+      const tasksRef = ref(db, TASKS_PATH);
+      unsub = onValue(
+        tasksRef,
+        (snap) => {
+          if (cancelled) return;
+          const data = snap.val() || {};
+          const list = Object.entries(data).map(([id, t]) => ({ id, ...t }));
+          setAllTasks(list);
+          setLoadError(false);
+          setLoaded(true);
+        },
+        (err) => {
+          if (cancelled) return;
+          console.error('[command-center] tasks read FAILED:', err);
+          setLoadError(true);
+          setLoaded(true);
+        }
+      );
+    }).catch((err) => {
+      if (cancelled) return;
+      console.error('[command-center] auth not ready:', err);
+      setLoadError(true);
+      setLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
 
   // Load fonts + inject keyframe animations
   useEffect(() => {
@@ -855,22 +895,34 @@ export default function IconCommandCenter() {
     if (!isMobile) setFocusedPerson(null);
   }, [isMobile]);
 
+  // ── Derived: open vs. done ───────────────────────────────────────────────
+  // Tasks without an explicit status default to 'open' for backward compat
+  // with anything written before this schema was finalised.
+  const openTasks = useMemo(
+    () => allTasks.filter(t => (t.status || 'open') === 'open'),
+    [allTasks]
+  );
+  const doneTasks = useMemo(
+    () => allTasks.filter(t => t.status === 'done'),
+    [allTasks]
+  );
+
   // Stats
   const stats = useMemo(() => ({
-    urgent: tasks.filter(t => t.priority === 'urgent').length,
-    today:  tasks.filter(t => isDueWithinNextDay(t.dueDate)).length,
-    total:  tasks.length,
-  }), [tasks]);
+    urgent: openTasks.filter(t => t.priority === 'urgent').length,
+    today:  openTasks.filter(t => isDueWithinNextDay(t.dueDate)).length,
+    total:  openTasks.length,
+  }), [openTasks]);
 
   const doneTodayTotal = useMemo(() => {
     const today = todayISO();
-    return completedTasks.filter(t => (t.completedAt || '').split('T')[0] === today).length;
-  }, [completedTasks]);
+    return doneTasks.filter(t => (t.completedAt || '').split('T')[0] === today).length;
+  }, [doneTasks]);
 
-  // Group + sort tasks by person — primary: priority rank, secondary: due date asc
+  // Group + sort open tasks by person — primary: priority rank, secondary: due date asc
   const tasksByPerson = useMemo(() => {
     return TEAM.reduce((acc, p) => {
-      acc[p.id] = tasks
+      acc[p.id] = openTasks
         .filter(t => t.assignee === p.id)
         .slice()
         .sort((a, b) => {
@@ -880,77 +932,136 @@ export default function IconCommandCenter() {
         });
       return acc;
     }, {});
-  }, [tasks]);
+  }, [openTasks]);
 
   // Per-person completed-today list, ordered by completion time desc
   const completedTodayByPerson = useMemo(() => {
     const today = todayISO();
     return TEAM.reduce((acc, p) => {
-      acc[p.id] = completedTasks
+      acc[p.id] = doneTasks
         .filter(t => t.assignee === p.id && (t.completedAt || '').split('T')[0] === today)
         .slice()
         .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
       return acc;
     }, {});
-  }, [completedTasks]);
+  }, [doneTasks]);
 
   const showFlash = (msg) => {
     setFlash(msg);
     setTimeout(() => setFlash(null), 1800);
   };
 
-  const handleSave = form => {
-    setTasks(prev => form.id
-      ? prev.map(t => t.id === form.id ? form : t)
-      : [...prev, { ...form, id: Date.now() }]
-    );
+  // ── Firebase write handlers ──────────────────────────────────────────────
+  const handleSave = (form) => {
+    if (form.id) {
+      // Edit existing — update at the keyed path. id stays in the document
+      // for client convenience but is also the key.
+      const { id, ...rest } = form;
+      update(ref(db, `${TASKS_PATH}/${id}`), rest)
+        .catch((e) => console.error('[command-center] save failed:', e));
+    } else {
+      // New task — let RTDB generate the key, then write the full record.
+      const newRef = push(ref(db, TASKS_PATH));
+      const record = {
+        ...form,
+        id: newRef.key,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      };
+      set(newRef, record)
+        .catch((e) => console.error('[command-center] create failed:', e));
+    }
     setEditing(null);
   };
 
-  const handleDelete = id => {
-    setTasks(prev => prev.filter(t => t.id !== id));
+  const handleDelete = (id) => {
+    remove(ref(db, `${TASKS_PATH}/${id}`))
+      .catch((e) => console.error('[command-center] delete failed:', e));
     setEditing(null);
   };
 
-  const completeTask = (task) => {
-    const completed = { ...task, completedAt: new Date().toISOString() };
-    setCompletedTasks(c => [...c, completed]);
-    setTasks(prev => prev.filter(t => t.id !== task.id));
-  };
-
-  const handleComplete = id => {
-    const task = tasks.find(t => t.id === id);
-    if (!task) return;
-    completeTask(task);
+  const handleComplete = (id) => {
+    update(ref(db, `${TASKS_PATH}/${id}`), {
+      status: 'done',
+      completedAt: new Date().toISOString(),
+    }).catch((e) => console.error('[command-center] complete failed:', e));
   };
 
   const handleToggleSubTask = (taskId, subTaskId) => {
-    setTasks(prev => {
-      const task = prev.find(t => t.id === taskId);
-      if (!task || !task.subTasks) return prev;
-      const wasAllComplete = task.subTasks.length > 0 && task.subTasks.every(s => s.completed);
-      const nextSubTasks = task.subTasks.map(s =>
-        s.id === subTaskId ? { ...s, completed: !s.completed } : s
-      );
-      const isAllComplete = nextSubTasks.length > 0 && nextSubTasks.every(s => s.completed);
+    const task = allTasks.find(t => t.id === taskId);
+    if (!task || !task.subTasks) return;
+    const wasAllComplete = task.subTasks.length > 0 && task.subTasks.every(s => s.completed);
+    const nextSubTasks = task.subTasks.map(s =>
+      s.id === subTaskId ? { ...s, completed: !s.completed } : s
+    );
+    const isAllComplete = nextSubTasks.length > 0 && nextSubTasks.every(s => s.completed);
 
-      if (!wasAllComplete && isAllComplete) {
-        // Auto-complete the master task
-        const completed = { ...task, subTasks: nextSubTasks, completedAt: new Date().toISOString() };
-        setCompletedTasks(c => [...c, completed]);
-        showFlash('✓ All sub tasks complete!');
-        return prev.filter(t => t.id !== taskId);
-      }
-      return prev.map(t => t.id === taskId ? { ...t, subTasks: nextSubTasks } : t);
-    });
+    const patch = { subTasks: nextSubTasks };
+    if (!wasAllComplete && isAllComplete) {
+      patch.status = 'done';
+      patch.completedAt = new Date().toISOString();
+      showFlash('✓ All sub tasks complete!');
+    }
+    update(ref(db, `${TASKS_PATH}/${taskId}`), patch)
+      .catch((e) => console.error('[command-center] subtask toggle failed:', e));
   };
 
   const handleAdd = (assignee) => setEditing({
-    title: '', customer: '', assignee: assignee || 'robert',
+    title: '', customer: '', address: '',
+    assignee: assignee || 'robert',
     category: 'customer', priority: 'medium',
     dueDate: todayISO(),
     subTasks: [], completionNotes: '',
   });
+
+  // ── Loading / error gate ────────────────────────────────────────────────
+  if (!loaded) {
+    return (
+      <>
+        <ReturnHomeButton />
+        <div style={{
+          minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)',
+          background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
+          color: '#a1a1aa', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', flexDirection: 'column', gap: '12px',
+          fontFamily: FB,
+        }}>
+          <div style={{
+            width: '44px', height: '44px', borderRadius: '50%',
+            border: '3px solid #27272a', borderTopColor: '#fbbf24',
+            animation: 'ccSpin 0.9s linear infinite',
+          }} />
+          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a' }}>
+            Connecting to Firebase…
+          </div>
+          <style>{`@keyframes ccSpin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <>
+        <ReturnHomeButton />
+        <div style={{
+          minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)',
+          background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
+          color: '#f4f4f5', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', flexDirection: 'column', gap: '12px',
+          fontFamily: FB, padding: '24px', textAlign: 'center',
+        }}>
+          <AlertTriangle size={32} color="#f87171" />
+          <div style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em' }}>
+            COULD NOT CONNECT TO DATABASE
+          </div>
+          <div style={{ fontSize: '13px', color: '#a1a1aa', maxWidth: '380px', lineHeight: 1.5 }}>
+            Check your connection and reload the page. Tasks may be temporarily unavailable.
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
