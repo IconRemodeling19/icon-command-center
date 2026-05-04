@@ -33,6 +33,44 @@ const PRIORITIES = {
   medium: { label: 'MEDIUM', bar: '#0ea5e9', text: '#38bdf8', pulse: false },
   low:    { label: 'LOW',    bar: '#52525b', text: '#a1a1aa', pulse: false },
 };
+const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+// ─── Date helpers ──────────────────────────────────────────────────────────────
+// We standardise on ISO date strings (YYYY-MM-DD) for new/edited tasks. Legacy
+// seed strings (e.g. "Today 4:00 PM", "May 5") are tolerated for display + sort
+// until each task is first edited, after which they're stored as ISO.
+
+const todayISO = () => new Date().toISOString().split('T')[0];
+const isISODate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+
+const formatDueDate = (s) => {
+  if (!s) return '';
+  if (!isISODate(s)) return s; // legacy free-text
+  const d = new Date(s + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const isDueToday = (s) => {
+  if (isISODate(s)) return s === todayISO();
+  return /today/i.test(s || '');
+};
+
+const isDueWithinNextDay = (s) => {
+  if (isISODate(s)) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowISO = tomorrow.toISOString().split('T')[0];
+    return s === todayISO() || s === tomorrowISO;
+  }
+  return /today|tomorrow|friday|thu/i.test(s || '');
+};
+
+const dateSortKey = (s) => isISODate(s) ? s : '9999-12-31'; // legacy sinks to bottom
 
 // ─── Sample Data ───────────────────────────────────────────────────────────────
 
@@ -67,6 +105,8 @@ const FONT_LINK = 'https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;
 const FD = "'Oswald', 'Arial Narrow', sans-serif";
 const FB = "'Manrope', 'Segoe UI', Arial, sans-serif";
 const FM = "'JetBrains Mono', 'Consolas', monospace";
+
+const newSubTaskId = () => `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -141,12 +181,47 @@ function LiveClock() {
   );
 }
 
-function TaskCard({ task, onEdit, onComplete }) {
+function SubTaskRow({ subTask, onToggle }) {
+  const done = !!subTask.completed;
+  return (
+    <div
+      onClick={(e) => { e.stopPropagation(); onToggle(subTask.id); }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '8px',
+        padding: '6px 8px', borderRadius: '4px', cursor: 'pointer',
+        background: done ? 'rgba(52,211,153,0.06)' : 'transparent',
+        transition: 'background 0.12s',
+      }}
+    >
+      <span style={{
+        flexShrink: 0,
+        width: '16px', height: '16px', borderRadius: '3px',
+        border: `1.5px solid ${done ? '#34d399' : '#52525b'}`,
+        background: done ? '#34d399' : 'transparent',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        {done && <Check size={11} color="#09090b" strokeWidth={3} />}
+      </span>
+      <span style={{
+        fontSize: '12px', color: done ? '#71717a' : '#d4d4d8',
+        textDecoration: done ? 'line-through' : 'none',
+        lineHeight: 1.4, fontFamily: FB, wordBreak: 'break-word',
+      }}>
+        {subTask.text}
+      </span>
+    </div>
+  );
+}
+
+function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
   const [hov, setHov] = useState(false);
   const cat = CATEGORIES[task.category];
   const pri = PRIORITIES[task.priority];
   const Icon = cat.icon;
-  const isToday = /today/i.test(task.dueDate);
+  const isToday = isDueToday(task.dueDate);
+  const subTasks = task.subTasks || [];
+  const doneCount = subTasks.filter(s => s.completed).length;
+  const hasNotes = !!(task.completionNotes && task.completionNotes.trim());
 
   return (
     <div
@@ -198,11 +273,56 @@ function TaskCard({ task, onEdit, onComplete }) {
           {task.title}
         </div>
 
+        {/* Notes badge */}
+        {hasNotes && (
+          <div
+            onClick={(e) => { e.stopPropagation(); onShowNotes(task); }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '4px',
+              padding: '3px 8px', borderRadius: '4px',
+              background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.32)',
+              color: '#fbbf24', fontSize: '11px', fontWeight: 600, fontFamily: FB,
+              marginBottom: '8px', cursor: 'pointer',
+            }}
+            title="View notes"
+          >
+            📋 Notes shared on this task — please review
+          </div>
+        )}
+
         {/* Customer */}
         <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FB }}>
           <Hash size={11} color="#52525b" />
           {task.customer}
         </div>
+
+        {/* Sub tasks */}
+        {subTasks.length > 0 && (
+          <div style={{
+            marginBottom: '10px', padding: '8px',
+            background: 'rgba(9,9,11,0.55)', border: '1px solid #27272a', borderRadius: '6px',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: '6px',
+            }}>
+              <span style={{
+                fontSize: '10px', fontWeight: 700, color: '#71717a',
+                textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: FB,
+              }}>
+                Sub Tasks
+              </span>
+              <span style={{ fontSize: '11px', color: '#a1a1aa', fontFamily: FM, fontVariantNumeric: 'tabular-nums' }}>
+                {doneCount} of {subTasks.length} complete
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {subTasks.map(s => (
+                <SubTaskRow key={s.id} subTask={s} onToggle={(id) => onToggleSubTask(task.id, id)} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Row 3: category + due date */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -220,7 +340,7 @@ function TaskCard({ task, onEdit, onComplete }) {
             color: isToday ? '#fcd34d' : '#71717a',
             fontVariantNumeric: 'tabular-nums',
           }}>
-            {task.dueDate}
+            {formatDueDate(task.dueDate)}
           </span>
         </div>
       </div>
@@ -228,7 +348,7 @@ function TaskCard({ task, onEdit, onComplete }) {
   );
 }
 
-function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
+function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus }) {
   const acc = ACCENTS[person.accent];
   const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
 
@@ -243,6 +363,7 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '12px 16px', borderBottom: '1px solid #27272a',
         background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
+        gap: '8px',
       }}>
         <div
           onClick={onFocus}
@@ -266,7 +387,7 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums' }}>
               {tasks.length}
@@ -285,6 +406,19 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
               {urgentCount} urgent
             </span>
           )}
+          <button
+            onClick={() => onShowDone(person.id)}
+            title="View completed tasks today"
+            style={{
+              padding: '4px 9px', background: 'rgba(52,211,153,0.12)',
+              border: '1px solid rgba(52,211,153,0.32)', borderRadius: '4px',
+              fontSize: '11px', fontWeight: 700, color: '#34d399',
+              letterSpacing: '0.05em', fontFamily: FB, cursor: 'pointer',
+              minHeight: '28px',
+            }}
+          >
+            ✓ {doneCount} done
+          </button>
           <button
             onClick={() => onAdd(person.id)}
             title="Add task"
@@ -307,20 +441,30 @@ function PersonColumn({ person, tasks, onAdd, onEdit, onComplete, onFocus }) {
             No open tasks
           </div>
         ) : (
-          tasks.map(t => <TaskCard key={t.id} task={t} onEdit={onEdit} onComplete={onComplete} />)
+          tasks.map(t => (
+            <TaskCard
+              key={t.id}
+              task={t}
+              onEdit={onEdit}
+              onComplete={onComplete}
+              onToggleSubTask={onToggleSubTask}
+              onShowNotes={onShowNotes}
+            />
+          ))
         )}
       </div>
     </div>
   );
 }
 
-// ─── Modal ─────────────────────────────────────────────────────────────────────
+// ─── Modal styles ──────────────────────────────────────────────────────────────
 
 const inputStyle = {
   width: '100%', background: '#09090b', border: '1px solid #3f3f46',
   borderRadius: '6px', padding: '12px 14px', minHeight: '44px', fontSize: '16px',
   color: '#f4f4f5', fontFamily: FB, outline: 'none', boxSizing: 'border-box',
 };
+const upperInputStyle = { ...inputStyle, textTransform: 'uppercase' };
 
 function Field({ label, children }) {
   return (
@@ -333,94 +477,294 @@ function Field({ label, children }) {
   );
 }
 
-function TaskModal({ task, onSave, onDelete, onClose }) {
-  const [form, setForm] = useState(task);
-  if (!task) return null;
-  const isNew = !task.id;
-  const canSave = form.title.trim().length > 0;
-
+function ModalShell({ title, accent = '#3f3f46', maxWidth = '480px', onClose, children }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 50,
+      position: 'fixed', inset: 0, zIndex: 60,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(6px)',
+      padding: '16px',
     }}>
       <div style={{
-        background: '#18181b', border: '1px solid #3f3f46',
-        borderRadius: '10px', width: '100%', maxWidth: '480px',
-        margin: '0 16px', boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+        background: '#18181b', border: `1px solid ${accent}`,
+        borderRadius: '10px', width: '100%', maxWidth,
+        boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+        maxHeight: 'calc(100vh - 32px)', display: 'flex', flexDirection: 'column',
       }}>
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #27272a' }}>
-          <span style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.06em' }}>
-            {isNew ? 'NEW TASK' : 'EDIT TASK'}
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {title}
           </span>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}>
             <X size={20} />
           </button>
         </div>
-
-        {/* Fields */}
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <Field label="Task">
-            <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="What needs to be done?" style={inputStyle} />
-          </Field>
-          <Field label="Customer / Job">
-            <input type="text" value={form.customer} onChange={e => setForm({ ...form, customer: e.target.value })} placeholder="e.g. Smith — Maple St (or Internal)" style={inputStyle} />
-          </Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Field label="Assigned To">
-              <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} style={inputStyle}>
-                {TEAM.map(p => <option key={p.id} value={p.id}>{p.name[0] + p.name.slice(1).toLowerCase()}</option>)}
-              </select>
-            </Field>
-            <Field label="Priority">
-              <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={inputStyle}>
-                {Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </Field>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <Field label="Category">
-              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={inputStyle}>
-                {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </Field>
-            <Field label="Due">
-              <input type="text" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} placeholder="e.g. Today 4:00 PM" style={inputStyle} />
-            </Field>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid #27272a' }}>
-          {!isNew ? (
-            <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
-              <Trash2 size={14} /> Delete
-            </button>
-          ) : <div />}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={onClose} style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}>
-              Cancel
-            </button>
-            <button
-              onClick={() => canSave && onSave(form)}
-              style={{
-                padding: '12px 20px', minHeight: '44px',
-                background: canSave ? '#f59e0b' : '#27272a',
-                border: 'none', borderRadius: '6px',
-                cursor: canSave ? 'pointer' : 'not-allowed',
-                color: canSave ? '#09090b' : '#52525b',
-                fontSize: '14px', fontWeight: 700,
-                letterSpacing: '0.06em', fontFamily: FB,
-              }}
-            >
-              {isNew ? 'CREATE TASK' : 'SAVE CHANGES'}
-            </button>
-          </div>
+        <div style={{ overflowY: 'auto' }}>
+          {children}
         </div>
       </div>
     </div>
+  );
+}
+
+// ─── Task Modal ────────────────────────────────────────────────────────────────
+
+function TaskModal({ task, onSave, onDelete, onClose }) {
+  const initialDueDate = isISODate(task.dueDate) ? task.dueDate : todayISO();
+  const [form, setForm] = useState({
+    ...task,
+    dueDate: initialDueDate,
+    subTasks: task.subTasks || [],
+    completionNotes: task.completionNotes || '',
+  });
+  const isNew = !task.id;
+  const canSave = (form.title || '').trim().length > 0;
+
+  const addSubTask = () => setForm(f => ({
+    ...f,
+    subTasks: [...f.subTasks, { id: newSubTaskId(), text: '', completed: false }],
+  }));
+  const updateSubTask = (id, text) => setForm(f => ({
+    ...f,
+    subTasks: f.subTasks.map(s => s.id === id ? { ...s, text } : s),
+  }));
+  const removeSubTask = (id) => setForm(f => ({
+    ...f,
+    subTasks: f.subTasks.filter(s => s.id !== id),
+  }));
+
+  const submit = () => {
+    if (!canSave) return;
+    const cleaned = {
+      ...form,
+      title: (form.title || '').toUpperCase(),
+      customer: (form.customer || '').toUpperCase(),
+      completionNotes: (form.completionNotes || '').toUpperCase(),
+      subTasks: (form.subTasks || [])
+        .filter(s => (s.text || '').trim().length > 0)
+        .map(s => ({ ...s, text: s.text.toUpperCase() })),
+    };
+    onSave(cleaned);
+  };
+
+  return (
+    <ModalShell title={isNew ? 'New Task' : 'Edit Task'} onClose={onClose}>
+      {/* Fields */}
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <Field label="Task">
+          <input
+            type="text" value={form.title}
+            onChange={e => setForm({ ...form, title: e.target.value })}
+            placeholder="WHAT NEEDS TO BE DONE?"
+            spellCheck={true}
+            style={upperInputStyle}
+          />
+        </Field>
+        <Field label="Customer / Job">
+          <input
+            type="text" value={form.customer}
+            onChange={e => setForm({ ...form, customer: e.target.value })}
+            placeholder="E.G. SMITH — MAPLE ST (OR INTERNAL)"
+            spellCheck={true}
+            style={upperInputStyle}
+          />
+        </Field>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Assigned To">
+            <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} style={inputStyle}>
+              {TEAM.map(p => <option key={p.id} value={p.id}>{p.name[0] + p.name.slice(1).toLowerCase()}</option>)}
+            </select>
+          </Field>
+          <Field label="Priority">
+            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={inputStyle}>
+              {Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </Field>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Category">
+            <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={inputStyle}>
+              {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Due">
+            <input
+              type="date"
+              value={form.dueDate || todayISO()}
+              defaultValue={todayISO()}
+              onChange={e => setForm({ ...form, dueDate: e.target.value })}
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+
+        {/* Notes for Task Completion */}
+        <Field label="Notes for Task Completion">
+          <textarea
+            value={form.completionNotes || ''}
+            onChange={e => setForm({ ...form, completionNotes: e.target.value })}
+            placeholder="ADD ANY NOTES, INSTRUCTIONS, OR INFORMATION NEEDED TO COMPLETE THIS TASK..."
+            spellCheck={true}
+            rows={4}
+            style={{
+              ...upperInputStyle,
+              minHeight: '110px',
+              resize: 'vertical',
+              fontFamily: FB,
+              lineHeight: 1.4,
+            }}
+          />
+        </Field>
+
+        {/* Sub Tasks */}
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', fontFamily: FB }}>
+              Sub Tasks
+            </span>
+            <span style={{ fontSize: '11px', color: '#52525b', fontFamily: FM }}>
+              {form.subTasks.length} added
+            </span>
+          </div>
+          {form.subTasks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+              {form.subTasks.map((s, idx) => (
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    type="text"
+                    value={s.text}
+                    onChange={e => updateSubTask(s.id, e.target.value)}
+                    placeholder={`SUB TASK #${idx + 1}`}
+                    spellCheck={true}
+                    style={{ ...upperInputStyle, padding: '10px 12px', minHeight: '40px', fontSize: '14px' }}
+                  />
+                  <button
+                    onClick={() => removeSubTask(s.id)}
+                    title="Remove sub task"
+                    style={{
+                      flexShrink: 0, width: '40px', height: '40px',
+                      background: 'transparent', border: '1px solid #3f3f46',
+                      borderRadius: '6px', cursor: 'pointer', color: '#f87171',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            onClick={addSubTask}
+            style={{
+              width: '100%', padding: '10px 14px', minHeight: '40px',
+              background: 'rgba(56,189,248,0.08)', border: '1px dashed rgba(56,189,248,0.4)',
+              borderRadius: '6px', cursor: 'pointer',
+              color: '#7dd3fc', fontSize: '13px', fontWeight: 600,
+              fontFamily: FB, letterSpacing: '0.04em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            }}
+          >
+            <Plus size={14} /> Add Sub Task
+          </button>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid #27272a', flexWrap: 'wrap', gap: '8px' }}>
+        {!isNew ? (
+          <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
+            <Trash2 size={14} /> Delete
+          </button>
+        ) : <div />}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={onClose} style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}>
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            style={{
+              padding: '12px 20px', minHeight: '44px',
+              background: canSave ? '#f59e0b' : '#27272a',
+              border: 'none', borderRadius: '6px',
+              cursor: canSave ? 'pointer' : 'not-allowed',
+              color: canSave ? '#09090b' : '#52525b',
+              fontSize: '14px', fontWeight: 700,
+              letterSpacing: '0.06em', fontFamily: FB,
+            }}
+          >
+            {isNew ? 'CREATE TASK' : 'SAVE CHANGES'}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── Notes Modal ───────────────────────────────────────────────────────────────
+
+function NotesModal({ task, onClose }) {
+  return (
+    <ModalShell title="Task Notes" accent="rgba(245,158,11,0.5)" maxWidth="520px" onClose={onClose}>
+      <div style={{ padding: '20px' }}>
+        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', marginBottom: '6px', fontFamily: FB }}>
+          Task
+        </div>
+        <div style={{ fontSize: '15px', fontWeight: 600, color: '#f4f4f5', fontFamily: FB, marginBottom: '14px', lineHeight: 1.4 }}>
+          {task.title}
+        </div>
+        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginBottom: '6px', fontFamily: FB }}>
+          Notes
+        </div>
+        <div style={{
+          fontSize: '13px', color: '#d4d4d8', fontFamily: FB,
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6,
+          background: '#09090b', border: '1px solid rgba(245,158,11,0.25)',
+          borderRadius: '6px', padding: '12px',
+        }}>
+          {task.completionNotes}
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── Completed Tasks Modal ─────────────────────────────────────────────────────
+
+function CompletedTasksModal({ person, completedToday, onClose }) {
+  const todayLabel = new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  return (
+    <ModalShell title={`${person.name}'s Completed Tasks — ${todayLabel}`} accent="rgba(52,211,153,0.4)" maxWidth="520px" onClose={onClose}>
+      <div style={{ padding: '20px' }}>
+        {completedToday.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '24px 0', fontFamily: FB }}>
+            No tasks completed today
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {completedToday.map(t => {
+              const time = new Date(t.completedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+              return (
+                <div key={`${t.id}-${t.completedAt}`} style={{
+                  background: 'rgba(9,9,11,0.6)', border: '1px solid #27272a',
+                  borderRadius: '6px', padding: '10px 12px',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f4f4f5', fontFamily: FB, marginBottom: '4px', lineHeight: 1.3 }}>
+                    {t.title}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#71717a', fontFamily: FB }}>
+                    <span>{t.customer}</span>
+                    <span style={{ fontFamily: FM, color: '#34d399', fontVariantNumeric: 'tabular-nums' }}>
+                      {time}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </ModalShell>
   );
 }
 
@@ -428,8 +772,11 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
 
 export default function IconCommandCenter() {
   const [tasks, setTasks] = useState(INITIAL_TASKS);
-  const [doneToday, setDoneToday] = useState(4);
+  const [completedTasks, setCompletedTasks] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [viewingNotes, setViewingNotes] = useState(null);
+  const [viewingDoneFor, setViewingDoneFor] = useState(null);
+  const [flash, setFlash] = useState(null);
   const [focusedPerson, setFocusedPerson] = useState(null);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
@@ -446,11 +793,20 @@ export default function IconCommandCenter() {
     style.textContent = `
       @keyframes iconPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
       @keyframes iconDot   { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+      @keyframes ccFlashIn {
+        0%   { transform: translate(-50%, -8px); opacity: 0; }
+        15%  { transform: translate(-50%, 0);    opacity: 1; }
+        85%  { transform: translate(-50%, 0);    opacity: 1; }
+        100% { transform: translate(-50%, -8px); opacity: 0; }
+      }
       * { box-sizing: border-box; }
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
       ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
       html, body { margin: 0; padding: 0; height: 100%; background: #080c12; }
+
+      /* Native date input — invert calendar icon for dark theme */
+      input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
 
       @media (max-width: 768px) {
         .cc-main {
@@ -502,20 +858,46 @@ export default function IconCommandCenter() {
   // Stats
   const stats = useMemo(() => ({
     urgent: tasks.filter(t => t.priority === 'urgent').length,
-    today:  tasks.filter(t => /today|tomorrow|friday|thu/i.test(t.dueDate)).length,
+    today:  tasks.filter(t => isDueWithinNextDay(t.dueDate)).length,
     total:  tasks.length,
   }), [tasks]);
 
-  // Group + sort tasks by person
+  const doneTodayTotal = useMemo(() => {
+    const today = todayISO();
+    return completedTasks.filter(t => (t.completedAt || '').split('T')[0] === today).length;
+  }, [completedTasks]);
+
+  // Group + sort tasks by person — primary: priority rank, secondary: due date asc
   const tasksByPerson = useMemo(() => {
-    const order = { urgent: 0, high: 1, medium: 2, low: 3 };
     return TEAM.reduce((acc, p) => {
       acc[p.id] = tasks
         .filter(t => t.assignee === p.id)
-        .sort((a, b) => order[a.priority] - order[b.priority]);
+        .slice()
+        .sort((a, b) => {
+          const pdiff = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+          if (pdiff !== 0) return pdiff;
+          return dateSortKey(a.dueDate).localeCompare(dateSortKey(b.dueDate));
+        });
       return acc;
     }, {});
   }, [tasks]);
+
+  // Per-person completed-today list, ordered by completion time desc
+  const completedTodayByPerson = useMemo(() => {
+    const today = todayISO();
+    return TEAM.reduce((acc, p) => {
+      acc[p.id] = completedTasks
+        .filter(t => t.assignee === p.id && (t.completedAt || '').split('T')[0] === today)
+        .slice()
+        .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+      return acc;
+    }, {});
+  }, [completedTasks]);
+
+  const showFlash = (msg) => {
+    setFlash(msg);
+    setTimeout(() => setFlash(null), 1800);
+  };
 
   const handleSave = form => {
     setTasks(prev => form.id
@@ -525,9 +907,50 @@ export default function IconCommandCenter() {
     setEditing(null);
   };
 
-  const handleDelete   = id => { setTasks(prev => prev.filter(t => t.id !== id)); setEditing(null); };
-  const handleComplete = id => { setTasks(prev => prev.filter(t => t.id !== id)); setDoneToday(d => d + 1); };
-  const handleAdd = assignee => setEditing({ title: '', customer: '', assignee: assignee || 'robert', category: 'customer', priority: 'medium', dueDate: 'Today' });
+  const handleDelete = id => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setEditing(null);
+  };
+
+  const completeTask = (task) => {
+    const completed = { ...task, completedAt: new Date().toISOString() };
+    setCompletedTasks(c => [...c, completed]);
+    setTasks(prev => prev.filter(t => t.id !== task.id));
+  };
+
+  const handleComplete = id => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    completeTask(task);
+  };
+
+  const handleToggleSubTask = (taskId, subTaskId) => {
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task || !task.subTasks) return prev;
+      const wasAllComplete = task.subTasks.length > 0 && task.subTasks.every(s => s.completed);
+      const nextSubTasks = task.subTasks.map(s =>
+        s.id === subTaskId ? { ...s, completed: !s.completed } : s
+      );
+      const isAllComplete = nextSubTasks.length > 0 && nextSubTasks.every(s => s.completed);
+
+      if (!wasAllComplete && isAllComplete) {
+        // Auto-complete the master task
+        const completed = { ...task, subTasks: nextSubTasks, completedAt: new Date().toISOString() };
+        setCompletedTasks(c => [...c, completed]);
+        showFlash('✓ All sub tasks complete!');
+        return prev.filter(t => t.id !== taskId);
+      }
+      return prev.map(t => t.id === taskId ? { ...t, subTasks: nextSubTasks } : t);
+    });
+  };
+
+  const handleAdd = (assignee) => setEditing({
+    title: '', customer: '', assignee: assignee || 'robert',
+    category: 'customer', priority: 'medium',
+    dueDate: todayISO(),
+    subTasks: [], completionNotes: '',
+  });
 
   return (
     <>
@@ -573,10 +996,10 @@ export default function IconCommandCenter() {
 
           {/* Stats row */}
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <StatBlock label="Urgent"     value={stats.urgent} tone="red"     />
-            <StatBlock label="Due Soon"   value={stats.today}  tone="amber"   />
-            <StatBlock label="Total Open" value={stats.total}  tone="zinc"    />
-            <StatBlock label="Done Today" value={doneToday}    tone="emerald" />
+            <StatBlock label="Urgent"     value={stats.urgent}   tone="red"     />
+            <StatBlock label="Due Soon"   value={stats.today}    tone="amber"   />
+            <StatBlock label="Total Open" value={stats.total}    tone="zinc"    />
+            <StatBlock label="Done Today" value={doneTodayTotal} tone="emerald" />
           </div>
 
           {/* Live clock */}
@@ -615,9 +1038,13 @@ export default function IconCommandCenter() {
               key={person.id}
               person={person}
               tasks={tasksByPerson[person.id] || []}
+              doneCount={(completedTodayByPerson[person.id] || []).length}
               onAdd={handleAdd}
               onEdit={setEditing}
               onComplete={handleComplete}
+              onToggleSubTask={handleToggleSubTask}
+              onShowNotes={setViewingNotes}
+              onShowDone={setViewingDoneFor}
               onFocus={isMobile ? () => setFocusedPerson(person.id) : undefined}
             />
           ))}
@@ -635,7 +1062,7 @@ export default function IconCommandCenter() {
           Live · Auto-syncs across all devices
         </div>
         <div>Tap any card to edit · Hover to complete · + to add</div>
-        <div style={{ fontFamily: FM }}>v1.0 · ICON-OPS</div>
+        <div style={{ fontFamily: FM }}>v1.1 · ICON-OPS</div>
       </footer>
 
       {/* ── FLOATING ADD BUTTON (mobile) ── */}
@@ -654,13 +1081,45 @@ export default function IconCommandCenter() {
         <Plus size={24} strokeWidth={3} color="#09090b" />
       </button>
 
-      {/* ── MODAL ── */}
+      {/* ── FLASH ── */}
+      {flash && (
+        <div style={{
+          position: 'fixed', top: '64px', left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '12px 22px', borderRadius: '999px',
+          background: 'linear-gradient(135deg, #34d399, #10b981)',
+          color: '#052e1c', fontWeight: 800, fontSize: '14px',
+          letterSpacing: '0.04em', fontFamily: FB,
+          boxShadow: '0 12px 40px rgba(16,185,129,0.45)',
+          zIndex: 80,
+          animation: 'ccFlashIn 1.8s ease forwards',
+        }}>
+          {flash}
+        </div>
+      )}
+
+      {/* ── MODALS ── */}
       {editing && (
         <TaskModal
           task={editing}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {viewingNotes && (
+        <NotesModal
+          task={viewingNotes}
+          onClose={() => setViewingNotes(null)}
+        />
+      )}
+
+      {viewingDoneFor && (
+        <CompletedTasksModal
+          person={TEAM.find(p => p.id === viewingDoneFor)}
+          completedToday={completedTodayByPerson[viewingDoneFor] || []}
+          onClose={() => setViewingDoneFor(null)}
         />
       )}
 
