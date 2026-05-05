@@ -878,8 +878,8 @@ export default function IconCommandCenter() {
     document.head.appendChild(style);
 
     return () => {
-      try { document.head.removeChild(link); }  catch (e) {}
-      try { document.head.removeChild(style); } catch (e) {}
+      try { document.head.removeChild(link); }  catch (e) { console.error('[App] failed to remove font link', e); }
+      try { document.head.removeChild(style); } catch (e) { console.error('[App] failed to remove style element', e); }
     };
   }, []);
 
