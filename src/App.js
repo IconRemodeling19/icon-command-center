@@ -1673,6 +1673,49 @@ function CompletedTasksModal({ person, completedToday, onClose }) {
   );
 }
 
+// ─── AI sub-task summary ───────────────────────────────────────────────────────
+// Fingerprint the *text* of sub-tasks (ignoring completion state). We only call
+// the proxy when this changes — toggling a checkbox shouldn't trigger a regen.
+
+const subTaskTextFingerprint = (subTasks) =>
+  (subTasks || [])
+    .map((s) => (s.text || '').trim())
+    .filter(Boolean)
+    .join('|');
+
+async function regenerateSubTaskSummary(taskId, subTasks) {
+  try {
+    const lines = (subTasks || [])
+      .map((s) => (s.text || '').trim())
+      .filter(Boolean)
+      .map((t) => `- ${t}`)
+      .join('\n');
+    if (!lines) {
+      // All sub-tasks removed → clear any prior summary so stale text doesn't persist.
+      await update(ref(db, `${TASKS_PATH}/${taskId}`), { subTaskSummary: null });
+      return;
+    }
+    const res = await fetch('/api/anthropic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system: 'You are a concise construction project assistant. Summarize the following sub-tasks in 1-2 plain sentences.',
+        messages: [{ role: 'user', content: lines }],
+        max_tokens: 200,
+        temperature: 0.3,
+      }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const text = (data?.content?.find?.((b) => b.type === 'text')?.text || '').trim();
+    if (!text) return;
+    await update(ref(db, `${TASKS_PATH}/${taskId}`), { subTaskSummary: text });
+  } catch (e) {
+    // Spec: fail silently — log only, never surface.
+    console.error('[command-center] subtask summary failed:', e);
+  }
+}
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function IconCommandCenter() {
@@ -1940,13 +1983,18 @@ export default function IconCommandCenter() {
   // ── Firebase write handlers ──────────────────────────────────────────────
   const handleSave = (form) => {
     if (form.id) {
-      // Edit existing — update at the keyed path. id stays in the document
-      // for client convenience but is also the key.
       const { id, ...rest } = form;
+      // Compare sub-task text content vs the prior persisted record. Only call
+      // the AI proxy when the text actually changed (additions/removals/edits).
+      const prior = allTasks.find((t) => t.id === id);
+      const priorFP = subTaskTextFingerprint(prior?.subTasks);
+      const nextFP  = subTaskTextFingerprint(rest.subTasks);
       update(ref(db, `${TASKS_PATH}/${id}`), rest)
+        .then(() => {
+          if (priorFP !== nextFP) regenerateSubTaskSummary(id, rest.subTasks);
+        })
         .catch((e) => console.error('[command-center] save failed:', e));
     } else {
-      // New task — let RTDB generate the key, then write the full record.
       const newRef = push(ref(db, TASKS_PATH));
       const record = {
         ...form,
@@ -1954,7 +2002,11 @@ export default function IconCommandCenter() {
         status: 'open',
         createdAt: new Date().toISOString(),
       };
+      const nextFP = subTaskTextFingerprint(record.subTasks);
       set(newRef, record)
+        .then(() => {
+          if (nextFP) regenerateSubTaskSummary(newRef.key, record.subTasks);
+        })
         .catch((e) => console.error('[command-center] create failed:', e));
     }
     setEditing(null);

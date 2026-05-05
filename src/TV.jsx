@@ -143,6 +143,28 @@ function TaskCard({ task, scale }) {
           {task.customer}
         </div>
       )}
+      {(() => {
+        const subCount = Array.isArray(task.subTasks) ? task.subTasks.length : 0;
+        const summary = (task.subTaskSummary || '').trim();
+        if (!summary && subCount === 0) return null;
+        const text = summary
+          ? `↳ ${summary}`
+          : `↳ ${subCount} sub-task${subCount === 1 ? '' : 's'} pending`;
+        return (
+          <div style={{
+            fontFamily: FB, fontStyle: 'italic', fontWeight: 500,
+            color: '#a1a1aa',
+            fontSize: scale.customer,
+            lineHeight: 1.3, wordBreak: 'break-word',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}>
+            {text}
+          </div>
+        );
+      })()}
     </div>
   );
 }
