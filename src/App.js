@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
-  Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin
+  Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { db, authReady, ref, onValue, set, update, remove, push } from './firebase';
 
@@ -778,10 +779,27 @@ export default function IconCommandCenter() {
   const [viewingNotes, setViewingNotes] = useState(null);
   const [viewingDoneFor, setViewingDoneFor] = useState(null);
   const [flash, setFlash] = useState(null);
-  const [focusedPerson, setFocusedPerson] = useState(null);
+  const [mobileIndex, setMobileIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(null);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
   );
+
+  const handleTouchStart = (e) => {
+    const t = e.touches[0];
+    setTouchStart({ x: t.clientX, y: t.clientY });
+  };
+  const handleTouchEnd = (e) => {
+    if (!touchStart) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.x;
+    const dy = t.clientY - touchStart.y;
+    setTouchStart(null);
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+    setMobileIndex(i =>
+      dx < 0 ? Math.min(i + 1, TEAM.length - 1) : Math.max(i - 1, 0)
+    );
+  };
 
   // ── Firebase subscription ────────────────────────────────────────────────
   // Wait for anonymous auth, then keep allTasks live-synced from RTDB.
@@ -847,33 +865,6 @@ export default function IconCommandCenter() {
 
       /* Native date input — invert calendar icon for dark theme */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
-
-      @media (max-width: 768px) {
-        .cc-main {
-          display: flex !important;
-          flex-direction: row !important;
-          overflow-x: auto !important;
-          overflow-y: hidden !important;
-          scroll-snap-type: x mandatory;
-          -webkit-overflow-scrolling: touch;
-          gap: 12px !important;
-          padding: 12px !important;
-        }
-        .cc-column {
-          min-width: 85vw;
-          flex: 0 0 85vw;
-          scroll-snap-align: start;
-        }
-        .cc-main.cc-focused {
-          flex-direction: column !important;
-          overflow-x: hidden !important;
-        }
-        .cc-main.cc-focused .cc-column {
-          min-width: 100% !important;
-          flex: 1 1 auto !important;
-          min-height: 0;
-        }
-      }
     `;
     document.head.appendChild(style);
 
@@ -890,10 +881,6 @@ export default function IconCommandCenter() {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  useEffect(() => {
-    if (!isMobile) setFocusedPerson(null);
-  }, [isMobile]);
 
   // ── Derived: open vs. done ───────────────────────────────────────────────
   // Tasks without an explicit status default to 'open' for backward compat
@@ -1118,33 +1105,114 @@ export default function IconCommandCenter() {
         </div>
       </header>
 
-      {/* ── 3-COLUMN MAIN ── */}
-      <main
-        className={`cc-main ${focusedPerson && isMobile ? 'cc-focused' : ''}`}
-        style={{
+      {/* ── COLUMN MAIN ── */}
+      {isMobile ? (
+        <main style={{
           position: 'relative', flex: 1, minHeight: 0,
-          display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '16px', padding: '16px 24px', overflow: 'hidden',
-        }}
-      >
-        {focusedPerson && isMobile && (
-          <button
-            onClick={() => setFocusedPerson(null)}
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          {/* Person tabs */}
+          <div style={{
+            display: 'flex',
+            background: '#09090b',
+            borderBottom: '1px solid #27272a',
+            flexShrink: 0,
+          }}>
+            {TEAM.map((person, i) => {
+              const active = mobileIndex === i;
+              const acc = ACCENTS[person.accent];
+              return (
+                <button
+                  key={person.id}
+                  onClick={() => setMobileIndex(i)}
+                  style={{
+                    flex: 1, minHeight: '48px', padding: '12px 8px',
+                    background: active ? 'rgba(24,24,27,0.95)' : 'transparent',
+                    border: 'none',
+                    borderBottom: active ? `2px solid ${acc.dot}` : '2px solid transparent',
+                    color: active ? acc.text : '#71717a',
+                    fontFamily: FD, fontSize: '14px', fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    cursor: 'pointer',
+                    transition: 'color 0.2s, border-color 0.2s, background 0.2s',
+                  }}
+                >
+                  {person.id === 'robert' ? 'ROB' : person.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Sliding column track */}
+          <div
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '12px 16px', minHeight: '44px', alignSelf: 'flex-start', flexShrink: 0,
-              background: 'rgba(24,24,27,0.95)', border: '1px solid #3f3f46',
-              borderRadius: '6px', color: '#f4f4f5', cursor: 'pointer',
-              fontSize: '14px', fontWeight: 700, fontFamily: FB,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
+              position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
             }}
           >
-            <ArrowLeft size={16} strokeWidth={2.5} /> Back
-          </button>
-        )}
-        {TEAM
-          .filter(p => !(focusedPerson && isMobile) || focusedPerson === p.id)
-          .map(person => (
+            <div style={{
+              display: 'flex', height: '100%',
+              width: `${TEAM.length * 100}%`,
+              transform: `translateX(-${mobileIndex * (100 / TEAM.length)}%)`,
+              transition: 'transform 0.3s ease-out',
+            }}>
+              {TEAM.map(person => (
+                <div key={person.id} style={{
+                  flex: `0 0 ${100 / TEAM.length}%`,
+                  height: '100%', padding: '12px',
+                  boxSizing: 'border-box', minWidth: 0,
+                }}>
+                  <PersonColumn
+                    person={person}
+                    tasks={tasksByPerson[person.id] || []}
+                    doneCount={(completedTodayByPerson[person.id] || []).length}
+                    onAdd={handleAdd}
+                    onEdit={setEditing}
+                    onComplete={handleComplete}
+                    onToggleSubTask={handleToggleSubTask}
+                    onShowNotes={setViewingNotes}
+                    onShowDone={setViewingDoneFor}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Swipe affordance arrows */}
+            {mobileIndex > 0 && (
+              <div style={{
+                position: 'absolute', left: '2px', top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#52525b', opacity: 0.55,
+                pointerEvents: 'none',
+                animation: 'iconDot 2.5s ease-in-out infinite',
+              }}>
+                <ChevronLeft size={22} strokeWidth={2.5} />
+              </div>
+            )}
+            {mobileIndex < TEAM.length - 1 && (
+              <div style={{
+                position: 'absolute', right: '2px', top: '50%',
+                transform: 'translateY(-50%)',
+                color: '#52525b', opacity: 0.55,
+                pointerEvents: 'none',
+                animation: 'iconDot 2.5s ease-in-out infinite',
+              }}>
+                <ChevronRight size={22} strokeWidth={2.5} />
+              </div>
+            )}
+          </div>
+        </main>
+      ) : (
+        <main
+          className="cc-main"
+          style={{
+            position: 'relative', flex: 1, minHeight: 0,
+            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '16px', padding: '16px 24px', overflow: 'hidden',
+          }}
+        >
+          {TEAM.map(person => (
             <PersonColumn
               key={person.id}
               person={person}
@@ -1156,10 +1224,10 @@ export default function IconCommandCenter() {
               onToggleSubTask={handleToggleSubTask}
               onShowNotes={setViewingNotes}
               onShowDone={setViewingDoneFor}
-              onFocus={isMobile ? () => setFocusedPerson(person.id) : undefined}
             />
           ))}
-      </main>
+        </main>
+      )}
 
       {/* ── FOOTER ── */}
       <footer style={{
