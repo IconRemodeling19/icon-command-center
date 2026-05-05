@@ -865,6 +865,39 @@ export default function IconCommandCenter() {
 
       /* Native date input — invert calendar icon for dark theme */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+      /* Mobile layout fixes — keep header stats visible and footer readable */
+      @media (max-width: 480px) {
+        .cc-header-row {
+          flex-wrap: wrap !important;
+          gap: 8px !important;
+          padding: 10px 14px !important;
+        }
+        .cc-stats {
+          flex-wrap: wrap !important;
+          justify-content: flex-end !important;
+        }
+        .cc-stats > div {
+          padding: 4px 10px !important;
+        }
+        .cc-stats > div > span:first-child {
+          font-size: 1.5rem !important;
+        }
+        .cc-stats > div > span:last-child {
+          font-size: 9px !important;
+          letter-spacing: 0.15em !important;
+        }
+        .cc-footer {
+          flex-direction: column !important;
+          gap: 3px !important;
+          padding: 8px 14px !important;
+          font-size: 11px !important;
+          text-align: center !important;
+        }
+        .cc-footer > div {
+          justify-content: center !important;
+        }
+      }
     `;
     document.head.appendChild(style);
 
@@ -1071,7 +1104,7 @@ export default function IconCommandCenter() {
         position: 'relative', borderBottom: '1px solid #27272a',
         background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
       }}>
-        <div style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div className="cc-header-row" style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
 
           {/* Brand mark */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -1093,7 +1126,7 @@ export default function IconCommandCenter() {
           </div>
 
           {/* Stats row */}
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="cc-stats" style={{ display: 'flex', alignItems: 'center' }}>
             <StatBlock label="Urgent"     value={stats.urgent}   tone="red"     />
             <StatBlock label="Due Soon"   value={stats.today}    tone="amber"   />
             <StatBlock label="Total Open" value={stats.total}    tone="zinc"    />
@@ -1230,7 +1263,7 @@ export default function IconCommandCenter() {
       )}
 
       {/* ── FOOTER ── */}
-      <footer style={{
+      <footer className="cc-footer" style={{
         position: 'relative', borderTop: '1px solid #27272a',
         background: 'rgba(9,9,11,0.6)', padding: '9px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
