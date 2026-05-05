@@ -504,19 +504,31 @@ function loadGoogleMaps() {
   if (typeof window === 'undefined') return Promise.resolve(false);
   if (window.google?.maps?.places) return Promise.resolve(true);
   if (_mapsLoading) return _mapsLoading;
+
+  // Bootstrap then importLibrary('places') — bootstrap.onload fires before
+  // the dynamically-injected places.js finishes loading, so we MUST wait on
+  // importLibrary (returns a Promise) before treating the API as ready.
+  const importPlaces = () => {
+    if (!window.google?.maps?.importLibrary) return Promise.resolve(false);
+    return window.google.maps.importLibrary('places')
+      .then(() => true)
+      .catch((e) => { console.error('[Maps] importLibrary("places") failed:', e); return false; });
+  };
+
   _mapsLoading = new Promise((resolve) => {
     const existing = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    const onReady = () => importPlaces().then(resolve);
     if (existing) {
-      existing.addEventListener('load', () => resolve(true));
+      if (window.google?.maps?.importLibrary) { onReady(); return; }
+      existing.addEventListener('load', onReady);
       existing.addEventListener('error', () => resolve(false));
-      if (window.google?.maps?.places) resolve(true);
       return;
     }
     const sc = document.createElement('script');
     sc.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&loading=async`;
     sc.async = true;
     sc.defer = true;
-    sc.onload = () => resolve(true);
+    sc.onload = onReady;
     sc.onerror = () => resolve(false);
     document.head.appendChild(sc);
   });
@@ -529,12 +541,13 @@ function AddressInput({ value, onChange, placeholder, style }) {
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
+  const debounceRef = useRef(null);
 
   useEffect(() => { loadGoogleMaps().then(setLoaded); }, []);
   useEffect(() => {
     if (loaded && window.google?.maps?.places) {
       try { setToken(new window.google.maps.places.AutocompleteSessionToken()); }
-      catch (e) { /* swallow */ }
+      catch (e) { console.error('[Maps]', e); }
     }
   }, [loaded]);
 
@@ -545,6 +558,12 @@ function AddressInput({ value, onChange, placeholder, style }) {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Tear down any pending debounce on unmount so we don't fire after the
+  // modal closes.
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
 
   const fetchSuggestions = useCallback((input) => {
@@ -561,14 +580,22 @@ function AddressInput({ value, onChange, placeholder, style }) {
           }
         }
       );
-    } catch (e) { /* swallow */ }
+    } catch (e) { console.error('[Maps]', e); }
   }, [loaded, token]);
+
+  const handleChange = (e) => {
+    onChange(e);
+    const v = e.target.value;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(v), 300);
+  };
 
   const select = (desc) => {
     onChange({ target: { value: desc } });
     setSuggestions([]); setOpen(false);
     if (loaded && window.google?.maps?.places) {
-      try { setToken(new window.google.maps.places.AutocompleteSessionToken()); } catch (e) { /* noop */ }
+      try { setToken(new window.google.maps.places.AutocompleteSessionToken()); }
+      catch (e) { console.error('[Maps]', e); }
     }
   };
 
@@ -577,7 +604,7 @@ function AddressInput({ value, onChange, placeholder, style }) {
       <input
         type="text"
         value={value || ''}
-        onChange={(e) => { onChange(e); fetchSuggestions(e.target.value); }}
+        onChange={handleChange}
         onFocus={() => suggestions.length > 0 && setOpen(true)}
         placeholder={placeholder}
         spellCheck={true}
