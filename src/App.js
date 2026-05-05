@@ -866,27 +866,63 @@ export default function IconCommandCenter() {
       /* Native date input — invert calendar icon for dark theme */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
 
-      /* Mobile layout fixes — keep header stats visible and footer readable */
+      /* Mobile layout fixes — split header (brand 50% / stats 2x2 50%), clock below, readable footer */
       @media (max-width: 480px) {
         .cc-header-row {
           flex-wrap: wrap !important;
-          gap: 8px !important;
+          align-items: center !important;
+          justify-content: space-between !important;
+          gap: 12px !important;
           padding: 10px 14px !important;
         }
+        /* Left half — brand mark */
+        .cc-header-row > div:first-child {
+          flex: 0 1 calc(50% - 6px) !important;
+          min-width: 0 !important;
+          gap: 10px !important;
+        }
+        .cc-header-row > div:first-child > div:first-child {
+          width: 36px !important;
+          height: 36px !important;
+        }
+        .cc-header-row > div:first-child > div:first-child > span {
+          font-size: 18px !important;
+        }
+        .cc-header-row > div:first-child > div:last-child > div:first-child {
+          font-size: 0.95rem !important;
+          line-height: 1.15 !important;
+        }
+        .cc-header-row > div:first-child > div:last-child > div:last-child {
+          font-size: 9px !important;
+          letter-spacing: 0.2em !important;
+          margin-top: 3px !important;
+        }
+        /* Right half — stats as 2x2 grid */
         .cc-stats {
-          flex-wrap: wrap !important;
-          justify-content: flex-end !important;
+          display: grid !important;
+          grid-template-columns: auto auto !important;
+          gap: 4px 0 !important;
+          flex: 0 1 calc(50% - 6px) !important;
+          justify-content: end !important;
+          align-items: center !important;
         }
         .cc-stats > div {
-          padding: 4px 10px !important;
+          padding: 2px 8px !important;
+          border-left: none !important;
         }
         .cc-stats > div > span:first-child {
-          font-size: 1.5rem !important;
+          font-size: 1.2rem !important;
         }
         .cc-stats > div > span:last-child {
           font-size: 9px !important;
           letter-spacing: 0.15em !important;
+          margin-top: 1px !important;
         }
+        /* LiveClock — full-width row below the split */
+        .cc-header-row > div:last-child {
+          flex: 1 1 100% !important;
+        }
+        /* Footer (unchanged from prior fix) */
         .cc-footer {
           flex-direction: column !important;
           gap: 3px !important;
