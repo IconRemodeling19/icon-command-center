@@ -342,6 +342,7 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
   return (
     <div className="cc-column" style={{
       display: 'flex', flexDirection: 'column',
+      height: '100%', minHeight: 0,
       background: '#09090b', border: '1px solid rgba(39,39,42,0.85)',
       borderRadius: '8px', overflow: 'hidden',
     }}>
@@ -426,7 +427,7 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
       </div>
 
       {/* Task list — scrollable for TV display */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
         {tasks.length === 0 ? (
           <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
             No open tasks
@@ -1282,6 +1283,7 @@ export default function IconCommandCenter() {
           style={{
             position: 'relative', flex: 1, minHeight: 0,
             display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+            gridTemplateRows: '1fr',
             gap: '16px', padding: '16px 24px', overflow: 'hidden',
           }}
         >
