@@ -347,42 +347,58 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
     }}>
       {/* Column header */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', flexDirection: 'column', gap: '10px',
         padding: '12px 16px', borderBottom: '1px solid #27272a',
         background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
-        gap: '8px',
       }}>
-        <div
-          onClick={onFocus}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '12px',
-            cursor: onFocus ? 'pointer' : 'default',
-            flex: 1, minWidth: 0,
-          }}
-        >
-          <div style={{
-            width: '10px', height: '10px', borderRadius: '50%',
-            background: acc.dot, boxShadow: `0 0 0 4px ${acc.ring}`,
-            flexShrink: 0,
-          }} />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap' }}>
-              {person.name}
-            </div>
-            <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '4px', fontFamily: FB, whiteSpace: 'nowrap' }}>
-              {person.role}
+        {/* Row 1: dot + name/role · task count · add button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            onClick={onFocus}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              cursor: onFocus ? 'pointer' : 'default',
+              flex: 1, minWidth: 0,
+            }}
+          >
+            <div style={{
+              width: '10px', height: '10px', borderRadius: '50%',
+              background: acc.dot, boxShadow: `0 0 0 4px ${acc.ring}`,
+              flexShrink: 0,
+            }} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {person.name}
+              </div>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '4px', fontFamily: FB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {person.role}
+              </div>
             </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexShrink: 0 }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
               {tasks.length}
             </span>
             <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#71717a', fontFamily: FB }}>
               tasks
             </span>
           </div>
+          <button
+            onClick={() => onAdd(person.id)}
+            title="Add task"
+            style={{
+              width: '44px', height: '44px', borderRadius: '6px',
+              border: '1px solid #3f3f46', background: 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#a1a1aa', flexShrink: 0,
+            }}
+          >
+            <Plus size={18} />
+          </button>
+        </div>
+
+        {/* Row 2: status badges */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {urgentCount > 0 && (
             <span style={{
               padding: '2px 8px', background: 'rgba(239,68,68,0.15)',
@@ -405,18 +421,6 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
             }}
           >
             ✓ {doneCount} done
-          </button>
-          <button
-            onClick={() => onAdd(person.id)}
-            title="Add task"
-            style={{
-              width: '44px', height: '44px', borderRadius: '6px',
-              border: '1px solid #3f3f46', background: 'transparent',
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#a1a1aa', flexShrink: 0,
-            }}
-          >
-            <Plus size={18} />
           </button>
         </div>
       </div>
