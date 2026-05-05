@@ -1,12 +1,50 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
   Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin,
-  ChevronLeft, ChevronRight
+  ChevronLeft, ChevronRight, Edit2, Paperclip, Upload, Calendar,
+  ClipboardList,
 } from 'lucide-react';
-import { db, authReady, ref, onValue, set, update, remove, push } from './firebase';
+import {
+  db, authReady, ref, onValue, set, update, remove, push,
+  storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
+} from './firebase';
 
 const TASKS_PATH = 'commandCenter/tasks';
+const ESTIMATES_PATH = 'estimates';
+const ESTIMATES_STORAGE_BASE = 'commandCenter/estimates';
+const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB per file
+
+// Reuse the Maps Places key already deployed in icon-work-orders.
+// We inject the script tag dynamically (no public/index.html change required).
+const GOOGLE_API_KEY = 'AIzaSyDP9N998QacTADs3UaDYBohltD3rfflMmE';
+
+const RESIDENTIAL_TYPES = [
+  'Kitchen Remodel', 'Bathroom Remodel', 'Basement Remodel / Finish',
+  'Interior Renovation', 'Exterior Renovation', 'Home Addition',
+  'New Home Build', 'Whole House Renovation', 'Painting', 'Flooring',
+  'Roofing', 'Siding', 'Windows & Doors', 'Deck / Porch / Patio',
+  'Masonry / Concrete', 'Drywall / Plaster', 'Trim / Carpentry',
+  'Structural Work', 'Garage Renovation / Addition', 'Laundry / Mudroom',
+  'Outdoor Living', 'Water / Fire Damage Repair', 'Insurance Restoration',
+  'Handyman / Small Repair', 'Punch List Work',
+  'Pre-Sale / Move-In Improvements', 'Other / General Estimate',
+];
+const COMMERCIAL_TYPES = [
+  'Tenant Build-Out', 'White Box / Vanilla Box', 'Office Renovation',
+  'Retail Build-Out', 'Restaurant / Food Service Build-Out',
+  'Medical / Dental Office Build-Out', 'Commercial Bathroom Renovation',
+  'Commercial Kitchen Work', 'Flooring', 'Painting',
+  'Drywall / Partitions', 'Doors / Hardware', 'Storefront / Exterior',
+  'Ceiling / ACT Grid', 'Electrical Coordination', 'Plumbing Coordination',
+  'HVAC Coordination', 'Fire / Life Safety Work', 'ADA Compliance Work',
+  'Landlord Work', 'Tenant Work', 'Demolition',
+  'Warehouse / Storage Area', 'Maintenance / Repair Work',
+  'Punch List / Closeout Work', 'Permit / Code Correction Work',
+  'Other / General Commercial Estimate',
+];
+const OTHER_RESIDENTIAL = 'Other / General Estimate';
+const OTHER_COMMERCIAL  = 'Other / General Commercial Estimate';
 
 // ─── Team & Config ─────────────────────────────────────────────────────────────
 
@@ -335,7 +373,11 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
   );
 }
 
-function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus }) {
+function PersonColumn({
+  person, tasks, doneCount,
+  onAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus,
+  headerToggleButton, bodyOverride,
+}) {
   const acc = ACCENTS[person.accent];
   const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
 
@@ -376,6 +418,7 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
               </div>
             </div>
           </div>
+          {headerToggleButton}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexShrink: 0 }}>
             <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
               {tasks.length}
@@ -426,26 +469,858 @@ function PersonColumn({ person, tasks, doneCount, onAdd, onEdit, onComplete, onT
         </div>
       </div>
 
-      {/* Task list — scrollable for TV display */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
-        {tasks.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
-            No open tasks
+      {/* Body — task list by default, or a caller-supplied override (used for Rob's estimates view) */}
+      {bodyOverride ? (
+        bodyOverride
+      ) : (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
+          {tasks.length === 0 ? (
+            <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
+              No open tasks
+            </div>
+          ) : (
+            tasks.map(t => (
+              <TaskCard
+                key={t.id}
+                task={t}
+                onEdit={onEdit}
+                onComplete={onComplete}
+                onToggleSubTask={onToggleSubTask}
+                onShowNotes={onShowNotes}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Estimates: Google Places autocomplete ─────────────────────────────────────
+// Loads the Maps JS once globally on mount. Pattern adapted from icon-work-orders.
+
+let _mapsLoading = null;
+function loadGoogleMaps() {
+  if (typeof window === 'undefined') return Promise.resolve(false);
+  if (window.google?.maps?.places) return Promise.resolve(true);
+  if (_mapsLoading) return _mapsLoading;
+  _mapsLoading = new Promise((resolve) => {
+    const existing = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(true));
+      existing.addEventListener('error', () => resolve(false));
+      if (window.google?.maps?.places) resolve(true);
+      return;
+    }
+    const sc = document.createElement('script');
+    sc.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_API_KEY}&libraries=places&loading=async`;
+    sc.async = true;
+    sc.defer = true;
+    sc.onload = () => resolve(true);
+    sc.onerror = () => resolve(false);
+    document.head.appendChild(sc);
+  });
+  return _mapsLoading;
+}
+
+function AddressInput({ value, onChange, placeholder, style }) {
+  const [loaded, setLoaded] = useState(false);
+  const [token, setToken] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+
+  useEffect(() => { loadGoogleMaps().then(setLoaded); }, []);
+  useEffect(() => {
+    if (loaded && window.google?.maps?.places) {
+      try { setToken(new window.google.maps.places.AutocompleteSessionToken()); }
+      catch (e) { /* swallow */ }
+    }
+  }, [loaded]);
+
+  // Click-outside handler closes the suggestion list.
+  useEffect(() => {
+    const handler = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const fetchSuggestions = useCallback((input) => {
+    if (!loaded || !input || input.length < 3) { setSuggestions([]); return; }
+    try {
+      new window.google.maps.places.AutocompleteService().getPlacePredictions(
+        { input, types: ['address'], componentRestrictions: { country: 'us' }, sessionToken: token },
+        (preds, status) => {
+          if (status === window.google.maps.places.PlacesServiceStatus.OK && preds) {
+            setSuggestions(preds.map((p) => ({ description: p.description })));
+            setOpen(true);
+          } else {
+            setSuggestions([]);
+          }
+        }
+      );
+    } catch (e) { /* swallow */ }
+  }, [loaded, token]);
+
+  const select = (desc) => {
+    onChange({ target: { value: desc } });
+    setSuggestions([]); setOpen(false);
+    if (loaded && window.google?.maps?.places) {
+      try { setToken(new window.google.maps.places.AutocompleteSessionToken()); } catch (e) { /* noop */ }
+    }
+  };
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      <input
+        type="text"
+        value={value || ''}
+        onChange={(e) => { onChange(e); fetchSuggestions(e.target.value); }}
+        onFocus={() => suggestions.length > 0 && setOpen(true)}
+        placeholder={placeholder}
+        spellCheck={true}
+        style={style}
+        autoComplete="off"
+      />
+      {open && suggestions.length > 0 && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0,
+          marginTop: '4px', zIndex: 70,
+          background: '#0d0d10', border: '1px solid #3f3f46',
+          borderRadius: '6px', maxHeight: '240px', overflowY: 'auto',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
+        }}>
+          {suggestions.map((s, i) => (
+            <button
+              key={`${s.description}-${i}`}
+              type="button"
+              onClick={() => select(s.description)}
+              style={{
+                width: '100%', textAlign: 'left',
+                padding: '10px 12px', background: 'transparent', border: 'none',
+                borderBottom: i < suggestions.length - 1 ? '1px solid #1f1f23' : 'none',
+                cursor: 'pointer', color: '#e4e4e7',
+                fontFamily: FB, fontSize: '14px', textTransform: 'uppercase',
+                letterSpacing: '0.02em',
+                display: 'flex', alignItems: 'center', gap: '8px',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(245,158,11,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <MapPin size={12} color="#71717a" />
+              <span>{s.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Estimates: helpers ────────────────────────────────────────────────────────
+
+const estimateBlank = (id) => ({
+  id,
+  customerName: '', address: '', estimateDate: todayISO(),
+  hasDeadline: 'no', deadlineDate: '',
+  referredBy: '', notes: '',
+  blueprints: { blueprints: false, designPlans: false, other: false },
+  workType: 'residential', workDetail: '', customWorkDetail: '',
+  attachments: [], completed: false,
+});
+
+const deadlineTone = (estimate) => {
+  if (estimate.hasDeadline !== 'yes' || !isISODate(estimate.deadlineDate)) return null;
+  const d = new Date(estimate.deadlineDate + 'T00:00:00');
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((d - today) / 86400000);
+  return days <= 7 ? 'red' : 'amber';
+};
+
+const estimateBlueprintsLabel = (bp) => {
+  if (!bp) return '';
+  const parts = [];
+  if (bp.blueprints) parts.push('Blueprints');
+  if (bp.designPlans) parts.push('Design Plans');
+  if (bp.other) parts.push('Other');
+  return parts.join(' · ');
+};
+
+// ─── Estimates: card ───────────────────────────────────────────────────────────
+
+function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }) {
+  const [hov, setHov] = useState(false);
+  const tone = deadlineTone(estimate);
+  const blueprintLine = estimateBlueprintsLabel(estimate.blueprints);
+  const attachCount = (estimate.attachments || []).length;
+  const dim = archived ? 0.55 : 1;
+  const workLabel = estimate.workDetail === OTHER_RESIDENTIAL || estimate.workDetail === OTHER_COMMERCIAL
+    ? (estimate.customWorkDetail || estimate.workDetail)
+    : estimate.workDetail;
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: 'relative',
+        opacity: dim,
+        background: archived ? 'rgba(24,24,27,0.55)' : (hov ? '#1c1c1f' : 'rgba(24,24,27,0.85)'),
+        border: `1px solid ${hov ? '#3f3f46' : '#27272a'}`,
+        borderLeft: `3px solid ${archived ? '#3f3f46' : '#fbbf24'}`,
+        borderRadius: '8px',
+        padding: '12px 14px',
+        marginBottom: '10px',
+        transition: 'opacity 0.25s, background 0.15s, transform 0.25s',
+        display: 'flex', flexDirection: 'column', gap: '6px',
+      }}
+    >
+      {/* Top row: customer + actions */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{
+            fontSize: '15px', fontWeight: 700, color: '#f4f4f5',
+            fontFamily: FB, lineHeight: 1.25, wordBreak: 'break-word',
+          }}>
+            {estimate.customerName || '(NO NAME)'}
           </div>
-        ) : (
-          tasks.map(t => (
-            <TaskCard
-              key={t.id}
-              task={t}
-              onEdit={onEdit}
-              onComplete={onComplete}
-              onToggleSubTask={onToggleSubTask}
-              onShowNotes={onShowNotes}
-            />
-          ))
+          {estimate.revisionNotes && (
+            <div style={{
+              marginTop: '4px',
+              fontSize: '12px', color: '#fcd34d', fontFamily: FB,
+              lineHeight: 1.35, wordBreak: 'break-word',
+            }}>
+              <span style={{ fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '6px' }}>
+                Revision:
+              </span>
+              {estimate.revisionNotes}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {!archived && (
+            <button
+              onClick={() => onToggleComplete(estimate)}
+              title="Mark complete"
+              style={{
+                width: '36px', height: '36px', borderRadius: '6px',
+                border: '1px solid #3f3f46', background: 'transparent',
+                cursor: 'pointer', color: '#34d399',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <Check size={16} />
+            </button>
+          )}
+          <button
+            onClick={() => onEdit(estimate)}
+            title={archived ? 'Edit (or revise)' : 'Edit estimate'}
+            style={{
+              width: '36px', height: '36px', borderRadius: '6px',
+              border: '1px solid #3f3f46', background: 'transparent',
+              cursor: 'pointer', color: '#a1a1aa',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Edit2 size={14} />
+          </button>
+          <button
+            onClick={() => onDelete(estimate)}
+            title="Delete estimate"
+            style={{
+              width: '36px', height: '36px', borderRadius: '6px',
+              border: '1px solid #3f3f46', background: 'transparent',
+              cursor: 'pointer', color: '#f87171',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      {estimate.address && (
+        <div style={{ fontSize: '12px', color: '#a1a1aa', display: 'flex', gap: '6px', alignItems: 'flex-start', fontFamily: FB }}>
+          <MapPin size={11} color="#52525b" style={{ marginTop: '2px', flexShrink: 0 }} />
+          <span style={{ wordBreak: 'break-word' }}>{estimate.address}</span>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
+        {estimate.estimateDate && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '2px 8px', borderRadius: '4px',
+            background: 'rgba(251,191,36,0.10)', border: '1px solid rgba(251,191,36,0.30)',
+            color: '#fcd34d', fontSize: '11px', fontWeight: 700, fontFamily: FB,
+            letterSpacing: '0.04em',
+          }}>
+            <Calendar size={10} />
+            {formatDueDate(estimate.estimateDate) || estimate.estimateDate}
+          </span>
+        )}
+        {workLabel && (
+          <span style={{
+            padding: '2px 8px', borderRadius: '4px',
+            background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.30)',
+            color: '#a5b4fc', fontSize: '11px', fontWeight: 600, fontFamily: FB,
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>
+            {(estimate.workType || '').toUpperCase()} · {workLabel.toUpperCase()}
+          </span>
+        )}
+        {tone && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '2px 8px', borderRadius: '4px',
+            background: tone === 'red' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+            border: `1px solid ${tone === 'red' ? 'rgba(239,68,68,0.45)' : 'rgba(245,158,11,0.45)'}`,
+            color: tone === 'red' ? '#f87171' : '#fbbf24',
+            fontSize: '11px', fontWeight: 700, fontFamily: FB, letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}>
+            <AlertTriangle size={10} />
+            DEADLINE {formatDueDate(estimate.deadlineDate) || estimate.deadlineDate}
+          </span>
+        )}
+        {estimate.revisionNotes && (
+          <span style={{
+            padding: '2px 8px', borderRadius: '4px',
+            background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.45)',
+            color: '#fcd34d', fontSize: '11px', fontWeight: 700, fontFamily: FB,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+          }}>
+            Revision
+          </span>
+        )}
+        {blueprintLine && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '2px 8px', borderRadius: '4px',
+            background: 'rgba(56,189,248,0.10)', border: '1px solid rgba(56,189,248,0.30)',
+            color: '#7dd3fc', fontSize: '11px', fontWeight: 600, fontFamily: FB,
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>
+            <FileText size={10} />
+            {blueprintLine}
+          </span>
+        )}
+        {attachCount > 0 && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '2px 8px', borderRadius: '4px',
+            background: 'rgba(161,161,170,0.10)', border: '1px solid rgba(161,161,170,0.30)',
+            color: '#d4d4d8', fontSize: '11px', fontWeight: 600, fontFamily: FB,
+            letterSpacing: '0.04em',
+          }}>
+            <Paperclip size={10} />
+            {attachCount} {attachCount === 1 ? 'FILE' : 'FILES'}
+          </span>
         )}
       </div>
     </div>
+  );
+}
+
+// ─── Estimates: list view (renders inside Rob's column body) ───────────────────
+
+function EstimatesView({ estimates, onAdd, onEdit, onEditArchived, onToggleComplete, onDelete }) {
+  const active = useMemo(
+    () => estimates.filter((e) => !e.completed)
+      .slice()
+      .sort((a, b) => dateSortKey(a.estimateDate).localeCompare(dateSortKey(b.estimateDate))),
+    [estimates]
+  );
+  const archived = useMemo(
+    () => estimates.filter((e) => !!e.completed)
+      .slice()
+      .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || '')),
+    [estimates]
+  );
+
+  return (
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
+      <button
+        onClick={onAdd}
+        style={{
+          width: '100%', padding: '10px 14px', minHeight: '44px',
+          marginBottom: '12px',
+          background: 'rgba(245,158,11,0.10)', border: '1px dashed rgba(245,158,11,0.45)',
+          borderRadius: '6px', cursor: 'pointer',
+          color: '#fbbf24', fontFamily: FB, fontWeight: 700, fontSize: '13px',
+          letterSpacing: '0.08em', textTransform: 'uppercase',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+        }}
+      >
+        <Plus size={14} /> New Estimate
+      </button>
+
+      <SectionLabel label={`Active Estimates (${active.length})`} accent="#fbbf24" />
+      {active.length === 0 ? (
+        <div style={{
+          textAlign: 'center', color: '#52525b', fontSize: '12px',
+          padding: '20px 0', fontFamily: FB, letterSpacing: '0.1em', textTransform: 'uppercase',
+        }}>
+          No active estimates
+        </div>
+      ) : (
+        active.map((e) => (
+          <EstimateCard
+            key={e.id}
+            estimate={e}
+            archived={false}
+            onToggleComplete={onToggleComplete}
+            onEdit={onEdit}
+            onDelete={onDelete}
+          />
+        ))
+      )}
+
+      <div style={{ height: '1px', background: '#27272a', margin: '20px 0 14px' }} />
+      <SectionLabel label={`Completed Estimates (${archived.length})`} accent="#52525b" />
+      {archived.length === 0 ? (
+        <div style={{
+          textAlign: 'center', color: '#3f3f46', fontSize: '12px',
+          padding: '12px 0', fontFamily: FB, letterSpacing: '0.1em', textTransform: 'uppercase',
+        }}>
+          Archive empty
+        </div>
+      ) : (
+        archived.map((e) => (
+          <EstimateCard
+            key={e.id}
+            estimate={e}
+            archived={true}
+            onEdit={onEditArchived}
+            onDelete={onDelete}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+function SectionLabel({ label, accent }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      marginBottom: '10px',
+    }}>
+      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: accent }} />
+      <span style={{
+        fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.22em',
+        color: '#a1a1aa', fontWeight: 700, fontFamily: FB,
+      }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: '1px', background: 'rgba(63,63,70,0.5)' }} />
+    </div>
+  );
+}
+
+// ─── Estimates: revision prompt (small modal) ──────────────────────────────────
+
+function RevisionPromptModal({ estimate, onAnswer, onClose }) {
+  return (
+    <ModalShell title="Edit Archived Estimate" accent="rgba(245,158,11,0.5)" maxWidth="420px" onClose={onClose}>
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ color: '#e4e4e7', fontSize: '14px', fontFamily: FB, lineHeight: 1.5 }}>
+          Is this a revision to an estimate already sent to{' '}
+          <span style={{ color: '#fbbf24', fontWeight: 700 }}>
+            {(estimate.customerName || 'this customer').toUpperCase()}
+          </span>?
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => onAnswer(false)}
+            style={{
+              flex: 1, minWidth: '120px', padding: '12px 16px', minHeight: '44px',
+              background: 'transparent', border: '1px solid #3f3f46',
+              borderRadius: '6px', cursor: 'pointer',
+              color: '#d4d4d8', fontFamily: FB, fontWeight: 700, fontSize: '13px',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}
+          >
+            No — Just Edit
+          </button>
+          <button
+            onClick={() => onAnswer(true)}
+            style={{
+              flex: 1, minWidth: '120px', padding: '12px 16px', minHeight: '44px',
+              background: '#f59e0b', border: 'none',
+              borderRadius: '6px', cursor: 'pointer',
+              color: '#09090b', fontFamily: FB, fontWeight: 700, fontSize: '13px',
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+            }}
+          >
+            Yes — Revision
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+// ─── Estimates: full add / edit modal ──────────────────────────────────────────
+
+function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
+  const [form, setForm] = useState(() => ({
+    ...estimateBlank(estimate.id),
+    ...estimate,
+    blueprints: { blueprints: false, designPlans: false, other: false, ...(estimate.blueprints || {}) },
+    attachments: estimate.attachments || [],
+    revisionNotes: estimate.revisionNotes || '',
+  }));
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileRef = useRef(null);
+  const isNew = !estimate.persisted; // persisted=true means it's an existing record being edited
+  const canSave = (form.customerName || '').trim().length > 0;
+
+  const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+  const setBlueprint = (k, v) => setForm((f) => ({
+    ...f, blueprints: { ...f.blueprints, [k]: v },
+  }));
+
+  const typeList = form.workType === 'commercial' ? COMMERCIAL_TYPES : RESIDENTIAL_TYPES;
+  const otherSentinel = form.workType === 'commercial' ? OTHER_COMMERCIAL : OTHER_RESIDENTIAL;
+  const showCustomDetail = form.workDetail === otherSentinel;
+
+  const onPickFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploadError('');
+    setUploading(true);
+    try {
+      const newAttachments = [];
+      for (const file of Array.from(files)) {
+        if (file.size > ATTACHMENT_MAX_BYTES) {
+          setUploadError(`"${file.name}" exceeds 20 MB.`);
+          continue;
+        }
+        const safe = file.name.replace(/[^\w.-]+/g, '_');
+        const path = `${ESTIMATES_STORAGE_BASE}/${form.id}/${Date.now()}_${safe}`;
+        const r = storageRef(storage, path);
+        await uploadBytes(r, file);
+        const url = await getDownloadURL(r);
+        newAttachments.push({ name: file.name, url, path });
+      }
+      if (newAttachments.length > 0) {
+        setForm((f) => ({ ...f, attachments: [...(f.attachments || []), ...newAttachments] }));
+      }
+    } catch (e) {
+      console.error('[estimates] upload failed:', e);
+      setUploadError('Upload failed — check console for details.');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = async (attachment) => {
+    setForm((f) => ({ ...f, attachments: (f.attachments || []).filter((a) => a.url !== attachment.url) }));
+    if (attachment.path) {
+      try { await deleteObject(storageRef(storage, attachment.path)); }
+      catch (e) { console.error('[estimates] storage delete failed:', e); }
+    }
+  };
+
+  const submit = () => {
+    if (!canSave) return;
+    const upper = (s) => (s || '').toUpperCase();
+    const cleaned = {
+      ...form,
+      customerName: upper(form.customerName),
+      address: upper(form.address),
+      referredBy: upper(form.referredBy),
+      notes: upper(form.notes),
+      customWorkDetail: upper(form.customWorkDetail),
+      revisionNotes: upper(form.revisionNotes),
+    };
+    if (isRevision) {
+      cleaned.completed = false;
+      cleaned.completedAt = null;
+    }
+    if (cleaned.hasDeadline !== 'yes') cleaned.deadlineDate = '';
+    onSave(cleaned);
+  };
+
+  const titlePrefix = isRevision ? 'Revise' : (isNew ? 'New' : 'Edit');
+
+  return (
+    <ModalShell title={`${titlePrefix} Estimate`} accent="rgba(245,158,11,0.55)" maxWidth="640px" onClose={onClose}>
+      <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+        {isRevision && (
+          <Field label="Revision Details">
+            <textarea
+              value={form.revisionNotes}
+              onChange={(e) => setField('revisionNotes', e.target.value)}
+              placeholder="WHAT IS BEING REVISED? (E.G. UPDATED SCOPE, REVISED PRICING, NEW PHASE)"
+              spellCheck={true} rows={3}
+              style={{ ...upperInputStyle, minHeight: '90px', resize: 'vertical', fontFamily: FB, lineHeight: 1.4 }}
+            />
+          </Field>
+        )}
+
+        <Field label="Customer Name">
+          <input
+            type="text" value={form.customerName}
+            onChange={(e) => setField('customerName', e.target.value)}
+            placeholder="E.G. SMITH FAMILY"
+            spellCheck={true}
+            style={upperInputStyle}
+          />
+        </Field>
+
+        <Field label="Address">
+          <AddressInput
+            value={form.address}
+            onChange={(e) => setField('address', e.target.value)}
+            placeholder="START TYPING THE ADDRESS..."
+            style={upperInputStyle}
+          />
+        </Field>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Date of Site Estimate">
+            <input
+              type="date"
+              value={form.estimateDate || todayISO()}
+              onChange={(e) => setField('estimateDate', e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="Deadline?">
+            <select
+              value={form.hasDeadline}
+              onChange={(e) => setField('hasDeadline', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="no">NO</option>
+              <option value="yes">YES</option>
+            </select>
+          </Field>
+        </div>
+
+        {form.hasDeadline === 'yes' && (
+          <Field label="Deadline Date">
+            <input
+              type="date"
+              value={form.deadlineDate || ''}
+              onChange={(e) => setField('deadlineDate', e.target.value)}
+              style={inputStyle}
+            />
+          </Field>
+        )}
+
+        <Field label="Referred By">
+          <input
+            type="text" value={form.referredBy}
+            onChange={(e) => setField('referredBy', e.target.value)}
+            placeholder="E.G. JOHN DOE / GOOGLE / PRIOR CUSTOMER"
+            spellCheck={true}
+            style={upperInputStyle}
+          />
+        </Field>
+
+        <Field label="Important Estimate Notes">
+          <textarea
+            value={form.notes}
+            onChange={(e) => setField('notes', e.target.value)}
+            placeholder="ANYTHING THE TEAM SHOULD KNOW BEFORE THE WALK..."
+            spellCheck={true} rows={3}
+            style={{ ...upperInputStyle, minHeight: '90px', resize: 'vertical', fontFamily: FB, lineHeight: 1.4 }}
+          />
+        </Field>
+
+        <div>
+          <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginBottom: '8px', fontFamily: FB }}>
+            Blueprints / Design Plans
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {[
+              { k: 'blueprints',  label: 'Blueprints' },
+              { k: 'designPlans', label: 'Design Plans' },
+              { k: 'other',       label: 'Other' },
+            ].map(({ k, label }) => {
+              const checked = !!form.blueprints[k];
+              return (
+                <button
+                  key={k} type="button"
+                  onClick={() => setBlueprint(k, !checked)}
+                  style={{
+                    flex: '1 1 30%', minHeight: '44px',
+                    padding: '10px 12px', borderRadius: '6px', cursor: 'pointer',
+                    background: checked ? 'rgba(56,189,248,0.15)' : 'transparent',
+                    border: `1px solid ${checked ? '#38bdf8' : '#3f3f46'}`,
+                    color: checked ? '#7dd3fc' : '#a1a1aa',
+                    fontFamily: FB, fontSize: '13px', fontWeight: 700,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  }}
+                >
+                  {checked && <Check size={13} />} {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <Field label="Type of Work">
+            <select
+              value={form.workType}
+              onChange={(e) => setField('workType', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="residential">RESIDENTIAL</option>
+              <option value="commercial">COMMERCIAL</option>
+            </select>
+          </Field>
+          <Field label="Detail">
+            <select
+              value={form.workDetail || ''}
+              onChange={(e) => setField('workDetail', e.target.value)}
+              style={inputStyle}
+            >
+              <option value="">— SELECT —</option>
+              {typeList.map((t) => (
+                <option key={t} value={t}>{t.toUpperCase()}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
+
+        {showCustomDetail && (
+          <Field label="Describe">
+            <input
+              type="text" value={form.customWorkDetail || ''}
+              onChange={(e) => setField('customWorkDetail', e.target.value)}
+              placeholder="DESCRIBE THE SCOPE..."
+              spellCheck={true}
+              style={upperInputStyle}
+            />
+          </Field>
+        )}
+
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', fontFamily: FB }}>
+              Attachments
+            </span>
+            <span style={{ fontSize: '11px', color: '#52525b', fontFamily: FM }}>
+              {(form.attachments || []).length} file(s) · max 20 MB each
+            </span>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            onChange={(e) => onPickFiles(e.target.files)}
+            style={{ display: 'none' }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current && fileRef.current.click()}
+            disabled={uploading}
+            style={{
+              width: '100%', padding: '10px 14px', minHeight: '44px',
+              background: uploading ? 'rgba(56,189,248,0.04)' : 'rgba(56,189,248,0.08)',
+              border: '1px dashed rgba(56,189,248,0.4)',
+              borderRadius: '6px', cursor: uploading ? 'progress' : 'pointer',
+              color: '#7dd3fc', fontSize: '13px', fontWeight: 600,
+              fontFamily: FB, letterSpacing: '0.04em',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            }}
+          >
+            <Upload size={14} /> {uploading ? 'UPLOADING...' : 'UPLOAD IMAGES OR PDFS'}
+          </button>
+          {uploadError && (
+            <div style={{ marginTop: '6px', color: '#f87171', fontSize: '12px', fontFamily: FB }}>
+              {uploadError}
+            </div>
+          )}
+          {(form.attachments || []).length > 0 && (
+            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {form.attachments.map((a) => (
+                <div key={a.url} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '8px 10px', borderRadius: '6px',
+                  background: 'rgba(9,9,11,0.7)', border: '1px solid #27272a',
+                }}>
+                  <Paperclip size={12} color="#71717a" />
+                  <a
+                    href={a.url} target="_blank" rel="noopener noreferrer"
+                    style={{
+                      flex: 1, minWidth: 0,
+                      color: '#e4e4e7', fontFamily: FB, fontSize: '13px',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      textDecoration: 'none',
+                    }}
+                  >
+                    {a.name}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(a)}
+                    title="Remove file"
+                    style={{
+                      width: '32px', height: '32px',
+                      background: 'transparent', border: '1px solid #3f3f46',
+                      borderRadius: '4px', cursor: 'pointer', color: '#f87171',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 20px', borderTop: '1px solid #27272a',
+        flexWrap: 'wrap', gap: '8px',
+      }}>
+        {!isNew ? (
+          <button
+            onClick={() => onDelete(estimate.id)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}
+          >
+            <Trash2 size={14} /> Delete
+          </button>
+        ) : <div />}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={onClose}
+            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            style={{
+              padding: '12px 20px', minHeight: '44px',
+              background: canSave ? '#f59e0b' : '#27272a',
+              border: 'none', borderRadius: '6px',
+              cursor: canSave ? 'pointer' : 'not-allowed',
+              color: canSave ? '#09090b' : '#52525b',
+              fontSize: '14px', fontWeight: 700,
+              letterSpacing: '0.06em', fontFamily: FB,
+            }}
+          >
+            {isRevision ? 'SAVE REVISION' : (isNew ? 'CREATE ESTIMATE' : 'SAVE CHANGES')}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
   );
 }
 
@@ -778,9 +1653,13 @@ export default function IconCommandCenter() {
   // status: 'open' | 'done'. Open tasks render in columns; done tasks are
   // surfaced through the per-person Done Today modal.
   const [allTasks, setAllTasks] = useState([]);
+  const [allEstimates, setAllEstimates] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [estimateEditing, setEstimateEditing] = useState(null); // { ...estimate, persisted, isRevision }
+  const [revisionPrompt, setRevisionPrompt] = useState(null);   // archived estimate awaiting yes/no
+  const [robEstimatesView, setRobEstimatesView] = useState(false);
   const [viewingNotes, setViewingNotes] = useState(null);
   const [viewingDoneFor, setViewingDoneFor] = useState(null);
   const [flash, setFlash] = useState(null);
@@ -843,6 +1722,25 @@ export default function IconCommandCenter() {
       cancelled = true;
       unsub();
     };
+  }, []);
+
+  // Estimates live-sync — independent listener, same auth-then-subscribe pattern.
+  // Failures here don't gate the main app loaded state (tasks listener owns that).
+  useEffect(() => {
+    let cancelled = false;
+    let unsub = () => {};
+    authReady.then(() => {
+      if (cancelled) return;
+      const r = ref(db, ESTIMATES_PATH);
+      unsub = onValue(r, (snap) => {
+        if (cancelled) return;
+        const data = snap.val() || {};
+        setAllEstimates(Object.entries(data).map(([id, e]) => ({ id, ...e })));
+      }, (err) => {
+        console.error('[command-center] estimates read FAILED:', err);
+      });
+    }).catch((err) => console.error('[command-center] estimates auth not ready:', err));
+    return () => { cancelled = true; unsub(); };
   }, []);
 
   // Load fonts + inject keyframe animations
@@ -1075,6 +1973,118 @@ export default function IconCommandCenter() {
     subTasks: [], completionNotes: '',
   });
 
+  // ── Estimate handlers ────────────────────────────────────────────────────
+  // New: pre-allocate an RTDB key so storage uploads have a stable path even
+  // before the record is persisted. Edit: pass the existing record + persisted=true.
+  const handleAddEstimate = () => {
+    const newId = push(ref(db, ESTIMATES_PATH)).key;
+    setEstimateEditing({ ...estimateBlank(newId), persisted: false, isRevision: false });
+  };
+  const handleEditEstimate = (estimate) => {
+    setEstimateEditing({ ...estimate, persisted: true, isRevision: false });
+  };
+  const handleEditArchivedEstimate = (estimate) => {
+    setRevisionPrompt(estimate);
+  };
+  const handleRevisionAnswer = (yes) => {
+    if (!revisionPrompt) return;
+    const target = revisionPrompt;
+    setRevisionPrompt(null);
+    setEstimateEditing({ ...target, persisted: true, isRevision: !!yes });
+  };
+
+  const handleSaveEstimate = (form) => {
+    const { id, persisted, isRevision, ...rest } = form;
+    const now = new Date().toISOString();
+    if (persisted) {
+      update(ref(db, `${ESTIMATES_PATH}/${id}`), { ...rest, updatedAt: now })
+        .catch((e) => console.error('[command-center] estimate save failed:', e));
+    } else {
+      // First write — set the full record at the pre-allocated key.
+      set(ref(db, `${ESTIMATES_PATH}/${id}`), {
+        ...rest,
+        id,
+        completed: !!rest.completed,
+        createdAt: now,
+        updatedAt: now,
+      }).catch((e) => console.error('[command-center] estimate create failed:', e));
+    }
+    setEstimateEditing(null);
+    if (isRevision) showFlash('✓ Revision saved — moved to active');
+  };
+
+  const handleDeleteEstimate = async (estimate) => {
+    const id = typeof estimate === 'string' ? estimate : estimate?.id;
+    if (!id) return;
+    const record = typeof estimate === 'object' ? estimate : allEstimates.find((e) => e.id === id);
+    const label = record?.customerName ? `"${record.customerName}"` : 'this estimate';
+    if (typeof window !== 'undefined' && !window.confirm(`Delete ${label}? This removes the record and any uploaded files.`)) return;
+    // Best-effort: clear attachments from Storage before removing the record.
+    if (record && Array.isArray(record.attachments)) {
+      for (const a of record.attachments) {
+        if (a?.path) {
+          try { await deleteObject(storageRef(storage, a.path)); }
+          catch (e) { /* file may already be gone — non-fatal */ }
+        }
+      }
+    }
+    remove(ref(db, `${ESTIMATES_PATH}/${id}`))
+      .catch((e) => console.error('[command-center] estimate delete failed:', e));
+    setEstimateEditing(null);
+  };
+
+  const handleToggleEstimateComplete = (estimate) => {
+    const next = !estimate.completed;
+    update(ref(db, `${ESTIMATES_PATH}/${estimate.id}`), {
+      completed: next,
+      completedAt: next ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
+    }).catch((e) => console.error('[command-center] estimate toggle failed:', e));
+    if (next) showFlash('✓ Estimate moved to archive');
+  };
+
+  // ── Rob's estimates extras — toggle pill + body override when active ────
+  const robEstimates = useMemo(() => allEstimates, [allEstimates]);
+  const robActiveCount = useMemo(
+    () => allEstimates.filter((e) => !e.completed).length,
+    [allEstimates]
+  );
+  const robProps = useMemo(() => {
+    const toggle = (
+      <button
+        onClick={() => setRobEstimatesView((v) => !v)}
+        title={robEstimatesView ? 'Back to tasks' : 'Show estimates'}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '6px 10px', minHeight: '32px',
+          background: robEstimatesView ? 'transparent' : 'rgba(245,158,11,0.12)',
+          border: `1px solid ${robEstimatesView ? '#3f3f46' : 'rgba(245,158,11,0.5)'}`,
+          borderRadius: '6px', cursor: 'pointer',
+          color: robEstimatesView ? '#a1a1aa' : '#fbbf24',
+          fontFamily: FB, fontSize: '11px', fontWeight: 700,
+          letterSpacing: '0.1em', textTransform: 'uppercase',
+          flexShrink: 0,
+        }}
+      >
+        {robEstimatesView
+          ? <><ArrowLeft size={12} /> Tasks</>
+          : <><ClipboardList size={12} /> Estimates{robActiveCount > 0 ? ` · ${robActiveCount}` : ''}</>}
+      </button>
+    );
+    const body = robEstimatesView ? (
+      <EstimatesView
+        estimates={robEstimates}
+        onAdd={handleAddEstimate}
+        onEdit={handleEditEstimate}
+        onEditArchived={handleEditArchivedEstimate}
+        onToggleComplete={handleToggleEstimateComplete}
+        onDelete={handleDeleteEstimate}
+      />
+    ) : null;
+    return { headerToggleButton: toggle, bodyOverride: body };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [robEstimatesView, robActiveCount, robEstimates]);
+
   // ── Loading / error gate ────────────────────────────────────────────────
   if (!loaded) {
     return (
@@ -1247,6 +2257,7 @@ export default function IconCommandCenter() {
                     onToggleSubTask={handleToggleSubTask}
                     onShowNotes={setViewingNotes}
                     onShowDone={setViewingDoneFor}
+                    {...(person.id === 'robert' ? robProps : {})}
                   />
                 </div>
               ))}
@@ -1299,6 +2310,7 @@ export default function IconCommandCenter() {
               onToggleSubTask={handleToggleSubTask}
               onShowNotes={setViewingNotes}
               onShowDone={setViewingDoneFor}
+              {...(person.id === 'robert' ? robProps : {})}
             />
           ))}
         </main>
@@ -1374,6 +2386,24 @@ export default function IconCommandCenter() {
           person={TEAM.find(p => p.id === viewingDoneFor)}
           completedToday={completedTodayByPerson[viewingDoneFor] || []}
           onClose={() => setViewingDoneFor(null)}
+        />
+      )}
+
+      {revisionPrompt && (
+        <RevisionPromptModal
+          estimate={revisionPrompt}
+          onAnswer={handleRevisionAnswer}
+          onClose={() => setRevisionPrompt(null)}
+        />
+      )}
+
+      {estimateEditing && (
+        <EstimateModal
+          estimate={estimateEditing}
+          isRevision={!!estimateEditing.isRevision}
+          onSave={handleSaveEstimate}
+          onDelete={handleDeleteEstimate}
+          onClose={() => setEstimateEditing(null)}
         />
       )}
 

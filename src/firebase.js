@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, set, update, remove, push } from "firebase/database";
 import { getAuth, signInAnonymously } from "firebase/auth";
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
 // Shares the icon-work-orders Firebase project. Command Center data lives
 // under the commandCenter/* namespace so it can't collide with work-orders
@@ -19,6 +20,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 const authReady = signInAnonymously(auth)
   .then((cred) => cred)
@@ -27,4 +29,8 @@ const authReady = signInAnonymously(auth)
     throw err;
   });
 
-export { app, db, auth, authReady, ref, onValue, set, update, remove, push };
+export {
+  app, db, auth, authReady,
+  ref, onValue, set, update, remove, push,
+  storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
+};
