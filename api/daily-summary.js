@@ -1,19 +1,33 @@
 // Vercel serverless function: posts a daily task completion summary to
-// Microsoft Teams. Triggered by the cron in vercel.json at 21:00 UTC daily.
+// Microsoft Teams. Triggered by the cron in vercel.json at 20:00 UTC daily
+// (4 PM Eastern during EDT).
 //
-// Reads commandCenter/tasks from the icon-work-orders RTDB using the same
-// anonymous-auth pattern as the web app (rules require auth != null), then
-// filters tasks completed today in Eastern time and posts a MessageCard.
+// Uses the Firebase Admin SDK with a service account stored in the
+// FIREBASE_SERVICE_ACCOUNT env var (entire JSON pasted as a single string).
+// Admin auth bypasses RTDB security rules.
 
-// Public web API key — same value lives in src/firebase.js. Not a secret;
-// access is gated by RTDB security rules + anonymous sign-in.
-const FIREBASE_API_KEY = "AIzaSyDwSR8OG2WOJAXn45DPI5jy0dmZhkRylEY";
+import admin from "firebase-admin";
 
 const PEOPLE = [
   { id: "robert", name: "Rob" },
   { id: "joe", name: "Joe" },
   { id: "bryan", name: "Bryan" },
 ];
+
+// Initialize once per warm container. Vercel reuses the process across
+// invocations, so admin.apps.length guards against re-init errors.
+function getDb() {
+  if (!admin.apps.length) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (!raw) throw new Error("Missing FIREBASE_SERVICE_ACCOUNT env var");
+    const serviceAccount = JSON.parse(raw);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      databaseURL: process.env.FIREBASE_DATABASE_URL,
+    });
+  }
+  return admin.database();
+}
 
 const easternDate = (d) =>
   new Intl.DateTimeFormat("en-CA", {
@@ -31,34 +45,6 @@ const easternDisplayDate = (d) =>
     day: "numeric",
     year: "numeric",
   }).format(d);
-
-async function getIdToken() {
-  const resp = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ returnSecureToken: true }),
-    }
-  );
-  if (!resp.ok) {
-    throw new Error(`Firebase anon auth failed: ${resp.status} ${await resp.text()}`);
-  }
-  const { idToken } = await resp.json();
-  return idToken;
-}
-
-async function readTasks(databaseURL, idToken) {
-  const base = databaseURL.replace(/\/$/, "");
-  const resp = await fetch(
-    `${base}/commandCenter/tasks.json?auth=${encodeURIComponent(idToken)}`
-  );
-  if (!resp.ok) {
-    throw new Error(`RTDB read failed: ${resp.status} ${await resp.text()}`);
-  }
-  const data = (await resp.json()) || {};
-  return Object.values(data);
-}
 
 function buildCard(grouped, displayDate) {
   const sections = PEOPLE.map((p) => {
@@ -93,17 +79,17 @@ function buildCard(grouped, displayDate) {
 
 export default async function handler(req, res) {
   try {
-    const databaseURL = process.env.FIREBASE_DATABASE_URL;
     const webhookURL = process.env.TEAMS_WEBHOOK_URL;
-
-    if (!databaseURL || !webhookURL) {
+    if (!webhookURL) {
       return res
         .status(500)
-        .json({ ok: false, error: "Missing FIREBASE_DATABASE_URL or TEAMS_WEBHOOK_URL" });
+        .json({ ok: false, error: "Missing TEAMS_WEBHOOK_URL" });
     }
 
-    const idToken = await getIdToken();
-    const tasks = await readTasks(databaseURL, idToken);
+    const db = getDb();
+    const snapshot = await db.ref("commandCenter/tasks").once("value");
+    const tasksData = snapshot.val() || {};
+    const tasks = Object.values(tasksData);
 
     const now = new Date();
     const today = easternDate(now);
@@ -145,6 +131,8 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("[daily-summary]", err);
-    return res.status(500).json({ ok: false, error: String(err && err.message || err) });
+    return res
+      .status(500)
+      .json({ ok: false, error: String((err && err.message) || err) });
   }
 }
