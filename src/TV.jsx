@@ -260,6 +260,31 @@ export default function TV() {
     return () => { cancelled = true; unsub(); };
   }, []);
 
+  useEffect(() => {
+    let wakeLock = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      } catch (e) {
+        console.error('[TV] Wake lock failed:', e);
+      }
+    };
+    requestWakeLock();
+    // Re-acquire wake lock when tab becomes visible again
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      if (wakeLock) wakeLock.release().catch(() => {});
+    };
+  }, []);
+
   const openTasks = useMemo(
     () => allTasks.filter((t) => (t.status || 'open') !== 'done'),
     [allTasks]
