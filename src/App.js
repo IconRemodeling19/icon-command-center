@@ -1433,6 +1433,25 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
     subTasks: f.subTasks.filter(s => s.id !== id),
   }));
 
+  const subTaskInputRefs = useRef([]);
+  const focusLastSubTaskRef = useRef(false);
+
+  useEffect(() => {
+    if (focusLastSubTaskRef.current) {
+      const last = subTaskInputRefs.current[form.subTasks.length - 1];
+      last?.focus();
+      focusLastSubTaskRef.current = false;
+    }
+  }, [form.subTasks.length]);
+
+  const handleSubTaskKeyDown = (e) => {
+    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+      e.preventDefault();
+      focusLastSubTaskRef.current = true;
+      addSubTask();
+    }
+  };
+
   const submit = () => {
     if (!canSave) return;
     const cleaned = {
@@ -1540,9 +1559,11 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
               {form.subTasks.map((s, idx) => (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <input
+                    ref={el => { subTaskInputRefs.current[idx] = el; }}
                     type="text"
                     value={s.text}
                     onChange={e => updateSubTask(s.id, e.target.value)}
+                    onKeyDown={handleSubTaskKeyDown}
                     placeholder={`SUB TASK #${idx + 1}`}
                     spellCheck={true}
                     style={{ ...upperInputStyle, padding: '10px 12px', minHeight: '40px', fontSize: '14px' }}
