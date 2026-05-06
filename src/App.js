@@ -1466,11 +1466,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           />
         </Field>
         <Field label="Address">
-          <input
-            type="text" value={form.address || ''}
+          <AddressInput
+            value={form.address || ''}
             onChange={e => setForm({ ...form, address: e.target.value })}
-            placeholder="E.G. 412 MAPLE ST, PLEASANTVILLE NY"
-            spellCheck={true}
+            placeholder="START TYPING AN ADDRESS..."
             style={upperInputStyle}
           />
         </Field>
