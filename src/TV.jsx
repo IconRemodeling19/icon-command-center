@@ -42,10 +42,10 @@ const formatDueDate = (s) => {
 // Each tier returns a set of CSS clamp() strings so every text element on
 // the wall scales together — no scrollbars, no truncation logic needed.
 const scaleFor = (count) => {
-  if (count <= 5)  return { tier: 'L', title: 'clamp(18px, 2.2vw, 44px)', customer: 'clamp(13px, 1.5vw, 30px)', meta:  'clamp(11px, 1.1vw, 22px)', cardPad: 'clamp(12px, 1.1vw, 22px)', cardGap: 'clamp(10px, 0.9vw, 18px)', colHeader: 'clamp(28px, 3.6vw, 72px)' };
-  if (count <= 10) return { tier: 'M', title: 'clamp(15px, 1.8vw, 36px)', customer: 'clamp(11px, 1.25vw, 26px)', meta: 'clamp(10px, 0.95vw, 20px)', cardPad: 'clamp(10px, 0.9vw, 18px)', cardGap: 'clamp(8px, 0.7vw, 14px)',  colHeader: 'clamp(24px, 3vw, 60px)' };
-  if (count <= 15) return { tier: 'S', title: 'clamp(13px, 1.5vw, 30px)', customer: 'clamp(10px, 1.1vw, 22px)',  meta: 'clamp(9px, 0.85vw, 18px)',  cardPad: 'clamp(8px, 0.75vw, 14px)', cardGap: 'clamp(6px, 0.55vw, 12px)', colHeader: 'clamp(22px, 2.6vw, 52px)' };
-  return                { tier: 'XS', title: 'clamp(11px, 1.2vw, 24px)', customer: 'clamp(9px, 0.95vw, 18px)', meta: 'clamp(8px, 0.75vw, 16px)',  cardPad: 'clamp(6px, 0.6vw, 12px)',  cardGap: 'clamp(4px, 0.4vw, 9px)',   colHeader: 'clamp(20px, 2.2vw, 44px)' };
+  if (count <= 5)  return { tier:'L',  title:'clamp(20px,2.4vw,64px)',  customer:'clamp(15px,1.7vw,40px)', meta:'clamp(12px,1.2vw,26px)', cardPad:'clamp(14px,1.3vw,28px)', cardGap:'clamp(12px,1vw,22px)',  colHeader:'clamp(32px,4vw,96px)'  };
+  if (count <= 10) return { tier:'M',  title:'clamp(17px,2vw,52px)',    customer:'clamp(13px,1.4vw,34px)', meta:'clamp(11px,1vw,22px)',  cardPad:'clamp(11px,1vw,22px)',  cardGap:'clamp(9px,0.8vw,18px)', colHeader:'clamp(28px,3.4vw,80px)' };
+  if (count <= 15) return { tier:'S',  title:'clamp(15px,1.7vw,42px)',  customer:'clamp(11px,1.2vw,28px)', meta:'clamp(10px,0.9vw,20px)', cardPad:'clamp(9px,0.85vw,18px)', cardGap:'clamp(7px,0.6vw,14px)', colHeader:'clamp(25px,2.9vw,68px)' };
+  return               { tier:'XS', title:'clamp(13px,1.4vw,34px)',  customer:'clamp(10px,1vw,22px)',   meta:'clamp(9px,0.8vw,18px)',  cardPad:'clamp(7px,0.7vw,14px)', cardGap:'clamp(5px,0.45vw,10px)', colHeader:'clamp(22px,2.5vw,56px)' };
 };
 
 function LiveClock() {
