@@ -3,7 +3,7 @@ import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
   Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin,
   ChevronLeft, ChevronRight, Edit2, Paperclip, Upload, Calendar,
-  ClipboardList,
+  ClipboardList, Users,
 } from 'lucide-react';
 import {
   db, authReady, ref, onValue, set, update, remove, push,
@@ -61,12 +61,17 @@ const ACCENTS = {
 };
 
 const CATEGORIES = {
-  customer:   { label: 'Customer',     icon: Phone,          color: '#93c5fd', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.28)'  },
-  contract:   { label: 'Contracts',    icon: FileText,       color: '#c4b5fd', bg: 'rgba(139,92,246,0.12)',  border: 'rgba(139,92,246,0.28)'  },
-  permit:     { label: 'Permits',      icon: Building2,      color: '#fdba74', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.28)'  },
-  finance:    { label: 'Finance',      icon: DollarSign,     color: '#86efac', bg: 'rgba(34,197,94,0.12)',   border: 'rgba(34,197,94,0.28)'   },
-  field:      { label: 'Field Ops',    icon: Hammer,         color: '#fde047', bg: 'rgba(234,179,8,0.12)',   border: 'rgba(234,179,8,0.28)'   },
-  inspection: { label: 'Inspections',  icon: ClipboardCheck, color: '#f9a8d4', bg: 'rgba(236,72,153,0.12)',  border: 'rgba(236,72,153,0.28)'  },
+  customer:      { label: 'Customer',           icon: Phone,          color: '#93c5fd', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.28)'  },
+  contract:      { label: 'Contracts',          icon: FileText,       color: '#c4b5fd', bg: 'rgba(139,92,246,0.12)',  border: 'rgba(139,92,246,0.28)'  },
+  permit:        { label: 'Permits',            icon: Building2,      color: '#fdba74', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.28)'  },
+  finance:       { label: 'Finance',            icon: DollarSign,     color: '#86efac', bg: 'rgba(34,197,94,0.12)',   border: 'rgba(34,197,94,0.28)'   },
+  field:         { label: 'Field Ops',          icon: Hammer,         color: '#fde047', bg: 'rgba(234,179,8,0.12)',   border: 'rgba(234,179,8,0.28)'   },
+  inspection:    { label: 'Inspections',        icon: ClipboardCheck, color: '#f9a8d4', bg: 'rgba(236,72,153,0.12)',  border: 'rgba(236,72,153,0.28)'  },
+  icon_internal: { label: 'ICON - INTERNAL',    icon: Hash,           color: '#a5b4fc', bg: 'rgba(99,102,241,0.12)',  border: 'rgba(99,102,241,0.28)'  },
+  internal:      { label: 'INTERNAL',           icon: AlertTriangle,  color: '#cbd5e1', bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.28)' },
+  followup:      { label: 'FOLLOW UP',          icon: Calendar,       color: '#67e8f9', bg: 'rgba(6,182,212,0.12)',   border: 'rgba(6,182,212,0.28)'   },
+  revision:      { label: 'REVISION REQUESTED', icon: Edit2,          color: '#fda4af', bg: 'rgba(244,63,94,0.12)',   border: 'rgba(244,63,94,0.28)'   },
+  staff:         { label: 'EMPLOYEE / STAFF',   icon: Users,          color: '#5eead4', bg: 'rgba(20,184,166,0.12)',  border: 'rgba(20,184,166,0.28)'  },
 };
 
 const PRIORITIES = {
