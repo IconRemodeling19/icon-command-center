@@ -1576,7 +1576,13 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
       </div>
 
       {/* Footer */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderTop: '1px solid #27272a', flexWrap: 'wrap', gap: '8px' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 24px', borderTop: '1px solid #27272a',
+        flexWrap: 'wrap', gap: '8px',
+        position: 'sticky', bottom: 0,
+        background: '#18181b', flexShrink: 0, zIndex: 1,
+      }}>
         {!isNew ? (
           <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
             <Trash2 size={14} /> Delete
@@ -1737,6 +1743,9 @@ export default function IconCommandCenter() {
   const [touchStart, setTouchStart] = useState(null);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
+  const [isRobAuth] = useState(() =>
+    typeof window !== 'undefined' && localStorage.getItem('isRobAuth') === 'true'
   );
 
   const handleTouchStart = (e) => {
@@ -2052,6 +2061,19 @@ export default function IconCommandCenter() {
     subTasks: [], completionNotes: '',
   });
 
+  const batchGenerateAISummaries = useCallback(async () => {
+    const targets = allTasks.filter((t) =>
+      Array.isArray(t.subTasks) &&
+      t.subTasks.some((s) => (s.text || '').trim().length > 0) &&
+      !t.subTaskSummary
+    );
+    for (const t of targets) {
+      await regenerateSubTaskSummary(t.id, t.subTasks);
+      await new Promise((r) => setTimeout(r, 600));
+    }
+    showFlash('AI summaries synced');
+  }, [allTasks]);
+
   // ── Estimate handlers ────────────────────────────────────────────────────
   // New: pre-allocate an RTDB key so storage uploads have a stable path even
   // before the record is persisted. Edit: pass the existing record + persisted=true.
@@ -2262,6 +2284,27 @@ export default function IconCommandCenter() {
             <StatBlock label="Total Open" value={stats.total}    tone="zinc"    />
             <StatBlock label="Done Today" value={doneTodayTotal} tone="emerald" />
           </div>
+
+          {/* Sync AI Summaries — Rob only, hidden in estimates view */}
+          {!robEstimatesView && isRobAuth && (
+            <button
+              onClick={batchGenerateAISummaries}
+              title="Generate AI summaries for tasks missing them"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '6px 10px', minHeight: '32px',
+                background: 'rgba(245,158,11,0.10)',
+                border: '1px solid rgba(245,158,11,0.4)',
+                borderRadius: '6px', cursor: 'pointer',
+                color: '#fbbf24',
+                fontFamily: FB, fontSize: '11px', fontWeight: 700,
+                letterSpacing: '0.1em', textTransform: 'uppercase',
+                flexShrink: 0,
+              }}
+            >
+              🤖 Sync AI Summaries
+            </button>
+          )}
 
           {/* Live clock */}
           <LiveClock />
