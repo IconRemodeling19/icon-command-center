@@ -1496,7 +1496,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
               {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </Field>
-          <Field label="Due">
+          <Field label="Due By">
             <input
               type="date"
               value={form.dueDate || todayISO()}
