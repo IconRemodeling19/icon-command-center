@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
   Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin,
-  ChevronLeft, ChevronRight, Edit2, Paperclip, Upload, Calendar,
+  ChevronLeft, ChevronRight, ChevronDown, Edit2, Paperclip, Upload, Calendar,
   ClipboardList, Users,
 } from 'lucide-react';
 import {
@@ -235,6 +235,7 @@ function SubTaskRow({ subTask, onToggle }) {
 
 function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
   const [hov, setHov] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const cat = CATEGORIES[task.category];
   const pri = PRIORITIES[task.priority];
   const Icon = cat.icon;
@@ -245,7 +246,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
 
   return (
     <div
-      onClick={() => onEdit(task)}
+      onClick={() => setExpanded(e => !e)}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       style={{
@@ -266,7 +267,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
       }} />
 
       <div style={{ paddingLeft: '16px', paddingRight: '12px', paddingTop: '12px', paddingBottom: '12px' }}>
-        {/* Row 1: priority label + complete button */}
+        {/* Row 1: priority label + complete + edit + chevron */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', color: pri.text, fontFamily: FD }}>
@@ -274,18 +275,40 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
             </span>
             {pri.pulse && <AlertTriangle size={11} color={pri.text} />}
           </div>
-          <button
-            onClick={e => { e.stopPropagation(); onComplete(task.id); }}
-            title="Mark complete"
-            style={{
-              opacity: hov ? 1 : 0, width: '44px', height: '44px', borderRadius: '50%',
-              border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'opacity 0.15s', flexShrink: 0,
-            }}
-          >
-            <Check size={16} color="#34d399" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            <button
+              onClick={e => { e.stopPropagation(); onComplete(task.id); }}
+              title="Mark complete"
+              style={{
+                opacity: hov ? 1 : 0, width: '36px', height: '36px', borderRadius: '50%',
+                border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'opacity 0.15s', flexShrink: 0,
+              }}
+            >
+              <Check size={14} color="#34d399" />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onEdit(task); }}
+              title="Edit task"
+              style={{
+                opacity: hov ? 1 : 0, width: '36px', height: '36px', borderRadius: '50%',
+                border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'opacity 0.15s', flexShrink: 0,
+              }}
+            >
+              <Edit2 size={14} color="#a1a1aa" />
+            </button>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: '20px', height: '20px', color: '#71717a',
+              transition: 'transform 0.18s ease',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}>
+              <ChevronDown size={14} />
+            </span>
+          </div>
         </div>
 
         {/* Title */}
@@ -293,7 +316,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
           {task.title}
         </div>
 
-        {/* Notes badge */}
+        {/* Notes pill (always shown when notes exist) */}
         {hasNotes && (
           <div
             onClick={(e) => { e.stopPropagation(); onShowNotes(task); }}
@@ -306,7 +329,19 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
             }}
             title="View notes"
           >
-            📋 Notes shared on this task — please review
+            📋 Notes — please review
+          </div>
+        )}
+
+        {/* Notes full text — expanded only */}
+        {expanded && hasNotes && (
+          <div style={{
+            fontSize: '12px', color: '#d4d4d8', lineHeight: 1.5, fontFamily: FB,
+            background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)',
+            borderRadius: '6px', padding: '8px 10px', marginBottom: '10px',
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+          }}>
+            {task.completionNotes}
           </div>
         )}
 
@@ -326,8 +361,28 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
           </div>
         )}
 
-        {/* Sub tasks */}
-        {subTasks.length > 0 && (
+        {/* Sub-tasks: collapsed → summary; expanded → full checklist */}
+        {subTasks.length > 0 && !expanded && (
+          <div style={{
+            marginBottom: '10px', padding: '8px',
+            background: 'rgba(9,9,11,0.55)', border: '1px solid #27272a', borderRadius: '6px',
+          }}>
+            <div style={{
+              fontSize: '10px', fontWeight: 700, color: '#71717a',
+              textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: FB,
+              marginBottom: '6px',
+            }}>
+              Sub-Task Summary
+            </div>
+            <div style={{
+              fontSize: '12px', color: '#d4d4d8', lineHeight: 1.4, fontFamily: FB,
+              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            }}>
+              {task.subTaskSummary || `↳ ${subTasks.length} sub-task${subTasks.length === 1 ? '' : 's'}`}
+            </div>
+          </div>
+        )}
+        {subTasks.length > 0 && expanded && (
           <div style={{
             marginBottom: '10px', padding: '8px',
             background: 'rgba(9,9,11,0.55)', border: '1px solid #27272a', borderRadius: '6px',
