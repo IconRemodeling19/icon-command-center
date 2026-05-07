@@ -26,6 +26,12 @@ const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
 const isISODate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const dateSortKey = (s) => (isISODate(s) ? s : '9999-12-31');
 
+// Multi-assign: full assignee list = primary + extras. Mirrors App.js helper.
+const getAssignees = (task) => {
+  const list = [task?.assignee, ...(Array.isArray(task?.extraAssignees) ? task.extraAssignees : [])];
+  return list.filter((id, i) => id && list.indexOf(id) === i);
+};
+
 const formatDueDate = (s) => {
   if (!s) return '';
   if (!isISODate(s)) return s;
@@ -319,7 +325,7 @@ export default function TV() {
       return dateSortKey(a.dueDate).localeCompare(dateSortKey(b.dueDate));
     };
     return TEAM.reduce((acc, p) => {
-      acc[p.id] = openTasks.filter((t) => t.assignee === p.id).slice().sort(sortFn);
+      acc[p.id] = openTasks.filter((t) => getAssignees(t).includes(p.id)).slice().sort(sortFn);
       return acc;
     }, {});
   }, [openTasks]);

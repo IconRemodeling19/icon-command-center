@@ -128,6 +128,13 @@ const FM = "'JetBrains Mono', 'Consolas', monospace";
 
 const newSubTaskId = () => `st_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+// Multi-assign: a task's full assignee list is task.assignee plus extraAssignees.
+// Legacy tasks without extraAssignees behave exactly as before.
+const getAssignees = (task) => {
+  const list = [task?.assignee, ...(Array.isArray(task?.extraAssignees) ? task.extraAssignees : [])];
+  return list.filter((id, i) => id && list.indexOf(id) === i);
+};
+
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function ReturnHomeButton() {
@@ -1472,6 +1479,28 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
     subTasks: task.subTasks || [],
     completionNotes: task.completionNotes || '',
   });
+
+  // Multi-assign: track selected people as a list in TEAM order.
+  const initialAssignees = (() => {
+    const set = new Set();
+    if (task.assignee) set.add(task.assignee);
+    (Array.isArray(task.extraAssignees) ? task.extraAssignees : []).forEach((id) => set.add(id));
+    const list = TEAM.filter((p) => set.has(p.id)).map((p) => p.id);
+    return list.length > 0 ? list : ['robert'];
+  })();
+  const [selectedAssignees, setSelectedAssignees] = useState(initialAssignees);
+  const allSelected = selectedAssignees.length === TEAM.length;
+  const toggleAssignee = (id) => {
+    setSelectedAssignees((prev) => {
+      const has = prev.includes(id);
+      if (has && prev.length === 1) return prev; // at least one must remain
+      const nextSet = new Set(prev);
+      if (has) nextSet.delete(id); else nextSet.add(id);
+      return TEAM.filter((p) => nextSet.has(p.id)).map((p) => p.id);
+    });
+  };
+  const selectAllAssignees = () => setSelectedAssignees(TEAM.map((p) => p.id));
+
   const isNew = !task.id;
   const canSave = (form.title || '').trim().length > 0;
 
@@ -1509,12 +1538,18 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
 
   const submit = () => {
     if (!canSave) return;
+    const primary = selectedAssignees[0];
+    const extras = selectedAssignees.slice(1);
     const cleaned = {
       ...form,
       title: (form.title || '').toUpperCase(),
       customer: (form.customer || '').toUpperCase(),
       address: (form.address || '').toUpperCase(),
       completionNotes: (form.completionNotes || '').toUpperCase(),
+      assignee: primary,
+      // null on the wire removes the field in RTDB so single-assignee tasks
+      // stay shaped exactly like before (no extraAssignees property).
+      extraAssignees: extras.length > 0 ? extras : null,
       subTasks: (form.subTasks || [])
         .filter(s => (s.text || '').trim().length > 0)
         .map(s => ({ ...s, text: s.text.toUpperCase() })),
@@ -1552,34 +1587,74 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
             style={upperInputStyle}
           />
         </Field>
+        <Field label="Assigned To">
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {TEAM.map((p) => {
+              const active = selectedAssignees.includes(p.id);
+              const onlyOne = active && selectedAssignees.length === 1;
+              const label = p.id === 'robert' ? 'ROB' : p.name;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => toggleAssignee(p.id)}
+                  title={onlyOne ? 'At least one person must be assigned' : ''}
+                  style={{
+                    flex: 1, minWidth: '64px', minHeight: '44px', padding: '10px 12px',
+                    background: active ? 'rgba(245,158,11,0.18)' : '#09090b',
+                    border: `1px solid ${active ? '#fbbf24' : '#3f3f46'}`,
+                    borderRadius: '6px',
+                    cursor: onlyOne ? 'not-allowed' : 'pointer',
+                    color: active ? '#fbbf24' : '#a1a1aa',
+                    fontFamily: FD, fontSize: '14px', fontWeight: 700,
+                    letterSpacing: '0.06em', textTransform: 'uppercase',
+                    transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={selectAllAssignees}
+              title="Assign to all"
+              style={{
+                flex: 1, minWidth: '64px', minHeight: '44px', padding: '10px 12px',
+                background: allSelected ? 'rgba(245,158,11,0.18)' : '#09090b',
+                border: `1px solid ${allSelected ? '#fbbf24' : '#3f3f46'}`,
+                borderRadius: '6px', cursor: 'pointer',
+                color: allSelected ? '#fbbf24' : '#a1a1aa',
+                fontFamily: FD, fontSize: '14px', fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+              }}
+            >
+              ALL
+            </button>
+          </div>
+        </Field>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Field label="Assigned To">
-            <select value={form.assignee} onChange={e => setForm({ ...form, assignee: e.target.value })} style={inputStyle}>
-              {TEAM.map(p => <option key={p.id} value={p.id}>{p.name[0] + p.name.slice(1).toLowerCase()}</option>)}
-            </select>
-          </Field>
           <Field label="Priority">
             <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} style={inputStyle}>
               {Object.entries(PRIORITIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </Field>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <Field label="Category">
             <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} style={inputStyle}>
               {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </Field>
-          <Field label="Due By">
-            <input
-              type="date"
-              value={form.dueDate || todayISO()}
-              defaultValue={todayISO()}
-              onChange={e => setForm({ ...form, dueDate: e.target.value })}
-              style={inputStyle}
-            />
-          </Field>
         </div>
+        <Field label="Due By">
+          <input
+            type="date"
+            value={form.dueDate || todayISO()}
+            defaultValue={todayISO()}
+            onChange={e => setForm({ ...form, dueDate: e.target.value })}
+            style={inputStyle}
+          />
+        </Field>
 
         {/* Notes for Task Completion */}
         <Field label="Notes for Task Completion">
@@ -2041,7 +2116,7 @@ export default function IconCommandCenter() {
   const tasksByPerson = useMemo(() => {
     return TEAM.reduce((acc, p) => {
       acc[p.id] = openTasks
-        .filter(t => t.assignee === p.id)
+        .filter(t => getAssignees(t).includes(p.id))
         .slice()
         .sort((a, b) => {
           const pdiff = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
@@ -2057,7 +2132,7 @@ export default function IconCommandCenter() {
     const today = todayISO();
     return TEAM.reduce((acc, p) => {
       acc[p.id] = doneTasks
-        .filter(t => t.assignee === p.id && (t.completedAt || '').split('T')[0] === today)
+        .filter(t => getAssignees(t).includes(p.id) && (t.completedAt || '').split('T')[0] === today)
         .slice()
         .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
       return acc;
