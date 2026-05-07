@@ -598,6 +598,12 @@ function loadGoogleMaps() {
     sc.onload = onReady;
     sc.onerror = () => resolve(false);
     document.head.appendChild(sc);
+  }).then((ok) => {
+    // Retry-on-failure: a `false` resolution (script error, importLibrary
+    // failed, missing window.google) shouldn't poison the cache forever.
+    // Clearing _mapsLoading here lets the next caller try again from scratch.
+    if (!ok) _mapsLoading = null;
+    return ok;
   });
   return _mapsLoading;
 }
@@ -607,7 +613,9 @@ function AddressInput({ value, onChange, placeholder, style }) {
   const [token, setToken] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState(null); // viewport coords for the dropdown
   const wrapRef = useRef(null);
+  const inputRef = useRef(null);
   const debounceRef = useRef(null);
 
   useEffect(() => { loadGoogleMaps().then(setLoaded); }, []);
@@ -632,6 +640,27 @@ function AddressInput({ value, onChange, placeholder, style }) {
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
+
+  // Track the input's viewport rect while the dropdown is visible. The
+  // dropdown is rendered with position:fixed so a modal's overflow:auto
+  // body can't clip it. Capture-phase scroll listener catches scroll events
+  // from any nested scroll container (e.g. ModalShell's body).
+  useEffect(() => {
+    if (!open || suggestions.length === 0) return;
+    const update = () => {
+      const el = inputRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setAnchor({ top: r.bottom + 4, left: r.left, width: r.width });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [open, suggestions.length]);
 
   const fetchSuggestions = useCallback((input) => {
     if (!loaded || !input || input.length < 3) { setSuggestions([]); return; }
@@ -669,6 +698,7 @@ function AddressInput({ value, onChange, placeholder, style }) {
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
       <input
+        ref={inputRef}
         type="text"
         value={value || ''}
         onChange={handleChange}
@@ -678,10 +708,11 @@ function AddressInput({ value, onChange, placeholder, style }) {
         style={style}
         autoComplete="off"
       />
-      {open && suggestions.length > 0 && (
+      {open && suggestions.length > 0 && anchor && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0,
-          marginTop: '4px', zIndex: 70,
+          position: 'fixed',
+          top: anchor.top, left: anchor.left, width: anchor.width,
+          zIndex: 70,
           background: '#0d0d10', border: '1px solid #3f3f46',
           borderRadius: '6px', maxHeight: '240px', overflowY: 'auto',
           boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
