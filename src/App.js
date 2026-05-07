@@ -1518,7 +1518,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
   // we haven't loaded yet. One-shot read — we never write to /orders.
   useEffect(() => {
     if (!isNew || taskType !== 'active_job') return;
-    if (orders !== null || ordersLoading || ordersError) return;
+    // Don't gate on ordersLoading: setting it inside the effect would otherwise
+    // trigger a cleanup-then-rerun cycle that cancels the in-flight fetch
+    // before its .then can set state, leaving the UI stuck on "Loading jobs…".
+    if (orders !== null || ordersError) return;
     let cancelled = false;
     setOrdersLoading(true);
     get(ref(db, 'orders'))
@@ -1541,7 +1544,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
         setOrdersLoading(false);
       });
     return () => { cancelled = true; };
-  }, [isNew, taskType, orders, ordersLoading, ordersError]);
+  }, [isNew, taskType, orders, ordersError]);
 
   const handleOrderSelect = (value) => {
     setSelectedOrderId(value);
