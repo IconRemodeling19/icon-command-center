@@ -243,8 +243,8 @@ function SubTaskRow({ subTask, onToggle }) {
 function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
   const [hov, setHov] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const cat = CATEGORIES[task.category];
-  const pri = PRIORITIES[task.priority];
+  const cat = CATEGORIES[task.category] || CATEGORIES.customer;
+  const pri = PRIORITIES[task.priority] || PRIORITIES.medium;
   const Icon = cat.icon;
   const isToday = isDueToday(task.dueDate);
   const subTasks = task.subTasks || [];
