@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set, update, remove, push } from "firebase/database";
+import { getDatabase, ref, onValue, get, set, update, remove, push } from "firebase/database";
 import { getAuth, signInAnonymously } from "firebase/auth";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -31,6 +31,6 @@ const authReady = signInAnonymously(auth)
 
 export {
   app, db, auth, authReady,
-  ref, onValue, set, update, remove, push,
+  ref, onValue, get, set, update, remove, push,
   storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
 };

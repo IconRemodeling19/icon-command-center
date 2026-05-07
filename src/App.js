@@ -6,7 +6,7 @@ import {
   ClipboardList, Users,
 } from 'lucide-react';
 import {
-  db, authReady, ref, onValue, set, update, remove, push,
+  db, authReady, ref, onValue, get, set, update, remove, push,
   storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
 } from './firebase';
 
@@ -1504,6 +1504,61 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
   const isNew = !task.id;
   const canSave = (form.title || '').trim().length > 0;
 
+  // Tie-to-active-job: only surfaced on the new-task flow. For edits we
+  // preserve whatever taskType was saved without exposing the toggle.
+  const [taskType, setTaskType] = useState(task.taskType || 'standalone');
+  // null = not yet fetched, [] = fetched empty
+  const [orders, setOrders] = useState(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(false);
+  // '' = no selection yet, '__other__' = manual entry, otherwise an order id
+  const [selectedOrderId, setSelectedOrderId] = useState('');
+
+  // Fetch orders only when the new-task flow has Tie-to-Active-Job active and
+  // we haven't loaded yet. One-shot read — we never write to /orders.
+  useEffect(() => {
+    if (!isNew || taskType !== 'active_job') return;
+    if (orders !== null || ordersLoading || ordersError) return;
+    let cancelled = false;
+    setOrdersLoading(true);
+    get(ref(db, 'orders'))
+      .then((snap) => {
+        if (cancelled) return;
+        const data = snap.val() || {};
+        const list = Object.entries(data)
+          .map(([id, o]) => ({ id, ...(o || {}) }))
+          .filter((o) => (o.customerName || '').trim().length > 0)
+          .sort((a, b) =>
+            (a.customerName || '').localeCompare(b.customerName || '', undefined, { sensitivity: 'base' })
+          );
+        setOrders(list);
+        setOrdersLoading(false);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('[command-center] orders read FAILED:', err);
+        setOrdersError(true);
+        setOrdersLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [isNew, taskType, orders, ordersLoading, ordersError]);
+
+  const handleOrderSelect = (value) => {
+    setSelectedOrderId(value);
+    if (value === '__other__') {
+      setForm((f) => ({ ...f, customer: '', address: '' }));
+      return;
+    }
+    if (!value) return;
+    const order = (orders || []).find((o) => o.id === value);
+    if (!order) return;
+    setForm((f) => ({
+      ...f,
+      customer: order.customerName || '',
+      address: order.address || '',
+    }));
+  };
+
   const addSubTask = () => setForm(f => ({
     ...f,
     subTasks: [...f.subTasks, { id: newSubTaskId(), text: '', completed: false }],
@@ -1540,6 +1595,11 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
     if (!canSave) return;
     const primary = selectedAssignees[0];
     const extras = selectedAssignees.slice(1);
+    // Only persist linkedOrderCustomer when an actual order was selected.
+    // 'Other' or empty selection on the new-task flow leaves it unlinked.
+    const linkedOrder = (isNew && taskType === 'active_job' && selectedOrderId && selectedOrderId !== '__other__')
+      ? (orders || []).find((o) => o.id === selectedOrderId)
+      : null;
     const cleaned = {
       ...form,
       title: (form.title || '').toUpperCase(),
@@ -1550,6 +1610,8 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
       // null on the wire removes the field in RTDB so single-assignee tasks
       // stay shaped exactly like before (no extraAssignees property).
       extraAssignees: extras.length > 0 ? extras : null,
+      taskType,
+      linkedOrderCustomer: linkedOrder ? (linkedOrder.customerName || '').toUpperCase() : null,
       subTasks: (form.subTasks || [])
         .filter(s => (s.text || '').trim().length > 0)
         .map(s => ({ ...s, text: s.text.toUpperCase() })),
@@ -1561,6 +1623,37 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
     <ModalShell title={isNew ? 'New Task' : 'Edit Task'} onClose={onClose}>
       {/* Fields */}
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {isNew && (
+          <Field label="Tie To">
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {[
+                { value: 'active_job', label: 'TIE TO ACTIVE JOB' },
+                { value: 'standalone', label: 'STANDALONE TASK' },
+              ].map((opt) => {
+                const active = taskType === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTaskType(opt.value)}
+                    style={{
+                      flex: 1, minHeight: '44px', padding: '10px 12px',
+                      background: active ? 'rgba(245,158,11,0.18)' : '#09090b',
+                      border: `1px solid ${active ? '#fbbf24' : '#3f3f46'}`,
+                      borderRadius: '6px', cursor: 'pointer',
+                      color: active ? '#fbbf24' : '#a1a1aa',
+                      fontFamily: FD, fontSize: '13px', fontWeight: 700,
+                      letterSpacing: '0.06em', textTransform: 'uppercase',
+                      transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+        )}
         <Field label="Task">
           <input
             type="text" value={form.title}
@@ -1571,13 +1664,37 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           />
         </Field>
         <Field label="Customer / Job">
-          <input
-            type="text" value={form.customer}
-            onChange={e => setForm({ ...form, customer: e.target.value })}
-            placeholder="E.G. SMITH — MAPLE ST (OR INTERNAL)"
-            spellCheck={true}
-            style={upperInputStyle}
-          />
+          {isNew && taskType === 'active_job' && !ordersError && selectedOrderId !== '__other__' ? (
+            ordersLoading || orders === null ? (
+              <div style={{ ...inputStyle, color: '#71717a', display: 'flex', alignItems: 'center' }}>
+                Loading jobs…
+              </div>
+            ) : (
+              <select
+                value={selectedOrderId}
+                onChange={(e) => handleOrderSelect(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">SELECT A JOB…</option>
+                {orders.map((o) => (
+                  <option key={o.id} value={o.id}>{o.customerName}</option>
+                ))}
+                <option value="__other__">OTHER</option>
+              </select>
+            )
+          ) : (
+            <input
+              type="text" value={form.customer}
+              onChange={e => setForm({ ...form, customer: e.target.value })}
+              placeholder={
+                isNew && (taskType === 'standalone' || selectedOrderId === '__other__' || ordersError)
+                  ? 'MANUALLY ENTER CUSTOMER NAME'
+                  : 'E.G. SMITH — MAPLE ST (OR INTERNAL)'
+              }
+              spellCheck={true}
+              style={upperInputStyle}
+            />
+          )}
         </Field>
         <Field label="Address">
           <AddressInput
