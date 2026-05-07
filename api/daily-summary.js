@@ -101,10 +101,19 @@ export default async function handler(req, res) {
       return easternDate(completed) === today;
     });
 
+    // Multi-assign: a task counts for every person in its full assignee
+    // list (primary + extras), so the per-person sections in the Teams
+    // card match the column counts shown in the Command Center.
+    const validIds = new Set(PEOPLE.map((p) => p.id));
     const grouped = {};
     for (const t of completedToday) {
-      const key = t.assignee || "unassigned";
-      (grouped[key] = grouped[key] || []).push(t);
+      const full = [t.assignee, ...(Array.isArray(t.extraAssignees) ? t.extraAssignees : [])];
+      const seen = new Set();
+      for (const id of full) {
+        if (!id || seen.has(id) || !validIds.has(id)) continue;
+        seen.add(id);
+        (grouped[id] = grouped[id] || []).push(t);
+      }
     }
 
     const card = buildCard(grouped, easternDisplayDate(now));
