@@ -443,7 +443,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
 function PersonColumn({
   person, tasks, doneCount,
   onAdd, onQuickAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus,
-  headerToggleButton, bodyOverride,
+  headerToggleButton, bodyOverride, isMobile,
 }) {
   const acc = ACCENTS[person.accent];
   const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
@@ -468,9 +468,9 @@ function PersonColumn({
   return (
     <div className="cc-column" style={{
       display: 'flex', flexDirection: 'column',
-      height: '100%', minHeight: 0,
+      height: isMobile ? 'auto' : '100%', minHeight: 0,
       background: '#09090b', border: '1px solid rgba(39,39,42,0.85)',
-      borderRadius: '8px', overflow: 'hidden',
+      borderRadius: '8px', overflow: isMobile ? 'visible' : 'hidden',
     }}>
       {/* Quick Task row — always at the top, above the column header */}
       {quickOpen ? (
@@ -626,7 +626,11 @@ function PersonColumn({
       {bodyOverride ? (
         bodyOverride
       ) : (
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px' }}>
+        <div style={{
+          flex: 1, minHeight: 0,
+          overflowY: isMobile ? 'visible' : 'auto',
+          WebkitOverflowScrolling: 'touch', padding: '12px',
+        }}>
           {tasks.length === 0 ? (
             <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
               No open tasks
@@ -1573,11 +1577,16 @@ function ModalShell({ title, accent = '#3f3f46', maxWidth = '480px', onClose, ch
           <span style={{ fontSize: '16px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {title}
           </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+            aria-label="Close"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}
+          >
             <X size={20} />
           </button>
         </div>
-        <div style={{ overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {children}
         </div>
       </div>
@@ -1596,6 +1605,25 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
     subTasks: task.subTasks || [],
     completionNotes: task.completionNotes || '',
   });
+
+  // Browser back / swipe-back gesture (mobile): intercept and close the modal
+  // instead of letting the browser navigate away to the previous page (which
+  // would land the user on the Operations Center and look like a logout).
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stateMarker = { ccTaskModal: true };
+    window.history.pushState(stateMarker, '');
+    const onPop = () => onClose();
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      // If we're being unmounted by anything OTHER than a back-nav (e.g. Save
+      // or X), pop our pushed state so we don't leave a dummy entry behind.
+      if (window.history.state && window.history.state.ccTaskModal) {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
 
   // Multi-assign: track selected people as a list in TEAM order.
   const initialAssignees = (() => {
@@ -1825,7 +1853,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           />
         </Field>
         <Field label="Assigned To">
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div className="cc-assignee-grid" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {TEAM.map((p) => {
               const active = selectedAssignees.includes(p.id);
               const onlyOne = active && selectedAssignees.length === 1;
@@ -1933,7 +1961,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
                     onKeyDown={handleSubTaskKeyDown}
                     placeholder={`SUB TASK #${idx + 1}`}
                     spellCheck={true}
-                    style={{ ...upperInputStyle, padding: '10px 12px', minHeight: '40px', fontSize: '14px' }}
+                    style={{ ...upperInputStyle, padding: '10px 12px', minHeight: '44px', fontSize: '16px' }}
                   />
                   <button
                     onClick={() => removeSubTask(s.id)}
@@ -1970,10 +1998,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
       {/* Footer */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 24px', borderTop: '1px solid #27272a',
+        padding: '12px 16px', borderTop: '1px solid #27272a',
         flexWrap: 'wrap', gap: '8px',
         position: 'sticky', bottom: 0,
-        background: '#18181b', flexShrink: 0, zIndex: 1,
+        background: '#18181b', flexShrink: 0, zIndex: 2,
       }}>
         {!isNew ? (
           <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
@@ -1981,7 +2009,11 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           </button>
         ) : <div />}
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={onClose} style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
+          >
             Cancel
           </button>
           <button
@@ -2239,6 +2271,19 @@ export default function IconCommandCenter() {
 
       /* Native date input — invert calendar icon for dark theme */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+
+      /* Mobile form fields — enforce 16px font-size minimum so iOS doesn't zoom on focus,
+         and stack the Assigned To toggle buttons into a 2-column grid. */
+      @media (max-width: 768px) {
+        input, select, textarea {
+          font-size: 16px !important;
+        }
+        .cc-assignee-grid {
+          display: grid !important;
+          grid-template-columns: 1fr 1fr !important;
+          gap: 8px !important;
+        }
+      }
 
       /* Mobile layout fixes — split header (brand 50% / stats 2x2 50%), clock below, readable footer */
       @media (max-width: 480px) {
@@ -2656,7 +2701,10 @@ export default function IconCommandCenter() {
     <>
     <ReturnHomeButton />
     <div style={{
-      minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)', overflow: 'hidden',
+      minHeight: 'calc(100vh - 36px)',
+      ...(isMobile
+        ? { overflow: 'visible' }
+        : { height: 'calc(100vh - 36px)', overflow: 'hidden' }),
       background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
       color: '#f4f4f5', display: 'flex', flexDirection: 'column',
       fontFamily: FB, position: 'relative',
@@ -2732,7 +2780,7 @@ export default function IconCommandCenter() {
       {isMobile ? (
         <main style={{
           position: 'relative', flex: 1, minHeight: 0,
-          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column', overflow: 'visible',
         }}>
           {/* Person tabs */}
           <div style={{
@@ -2771,11 +2819,12 @@ export default function IconCommandCenter() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
             style={{
-              position: 'relative', flex: 1, minHeight: 0, overflow: 'hidden',
+              position: 'relative', flex: 1, minHeight: 0,
+              overflowX: 'hidden', overflowY: 'visible',
             }}
           >
             <div style={{
-              display: 'flex', height: '100%',
+              display: 'flex', alignItems: 'flex-start',
               width: `${TEAM.length * 100}%`,
               transform: `translateX(-${mobileIndex * (100 / TEAM.length)}%)`,
               transition: 'transform 0.3s ease-out',
@@ -2783,7 +2832,7 @@ export default function IconCommandCenter() {
               {TEAM.map(person => (
                 <div key={person.id} style={{
                   flex: `0 0 ${100 / TEAM.length}%`,
-                  height: '100%', padding: '12px',
+                  padding: '12px',
                   boxSizing: 'border-box', minWidth: 0,
                 }}>
                   <PersonColumn
@@ -2797,6 +2846,7 @@ export default function IconCommandCenter() {
                     onToggleSubTask={handleToggleSubTask}
                     onShowNotes={setViewingNotes}
                     onShowDone={setViewingDoneFor}
+                    isMobile={true}
                     {...(person.id === 'robert' ? robProps : {})}
                   />
                 </div>
