@@ -442,11 +442,28 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
 
 function PersonColumn({
   person, tasks, doneCount,
-  onAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus,
+  onAdd, onQuickAdd, onEdit, onComplete, onToggleSubTask, onShowNotes, onShowDone, onFocus,
   headerToggleButton, bodyOverride,
 }) {
   const acc = ACCENTS[person.accent];
   const urgentCount = tasks.filter(t => t.priority === 'urgent').length;
+
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickText, setQuickText] = useState('');
+  const quickInputRef = useRef(null);
+
+  useEffect(() => {
+    if (quickOpen && quickInputRef.current) quickInputRef.current.focus();
+  }, [quickOpen]);
+
+  const submitQuick = () => {
+    const trimmed = quickText.trim();
+    if (!trimmed) { setQuickOpen(false); setQuickText(''); return; }
+    if (onQuickAdd) onQuickAdd(person.id, trimmed);
+    setQuickText('');
+    setQuickOpen(false);
+  };
+  const cancelQuick = () => { setQuickText(''); setQuickOpen(false); };
 
   return (
     <div className="cc-column" style={{
@@ -455,6 +472,75 @@ function PersonColumn({
       background: '#09090b', border: '1px solid rgba(39,39,42,0.85)',
       borderRadius: '8px', overflow: 'hidden',
     }}>
+      {/* Quick Task row — always at the top, above the column header */}
+      {quickOpen ? (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px',
+          padding: '8px 10px', borderBottom: '1px solid #27272a',
+          background: 'rgba(245,158,11,0.08)', flexShrink: 0,
+        }}>
+          <input
+            ref={quickInputRef}
+            type="text"
+            value={quickText}
+            onChange={(e) => setQuickText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); submitQuick(); }
+              else if (e.key === 'Escape') { e.preventDefault(); cancelQuick(); }
+            }}
+            placeholder="Add Quick Data Now, Add Detail ASAP!"
+            spellCheck={true}
+            style={{
+              flex: 1, minWidth: 0, minHeight: '36px', padding: '8px 10px',
+              background: '#09090b', border: '1px solid #fbbf24',
+              borderRadius: '6px', color: '#f4f4f5',
+              fontFamily: FB, fontSize: '13px', outline: 'none',
+            }}
+          />
+          <button
+            type="button" onClick={submitQuick} title="Save"
+            style={{
+              minWidth: '36px', minHeight: '36px',
+              background: 'rgba(245,158,11,0.18)', border: '1px solid #fbbf24',
+              borderRadius: '6px', color: '#fbbf24', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Check size={16} />
+          </button>
+          <button
+            type="button" onClick={cancelQuick} title="Cancel"
+            style={{
+              minWidth: '36px', minHeight: '36px',
+              background: 'transparent', border: '1px solid #3f3f46',
+              borderRadius: '6px', color: '#a1a1aa', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setQuickOpen(true)}
+          title="Quick add task"
+          style={{
+            width: '100%', minHeight: '36px',
+            padding: '8px 12px',
+            background: 'rgba(245,158,11,0.08)',
+            border: 'none', borderBottom: '1px solid rgba(245,158,11,0.25)',
+            color: '#fbbf24', fontFamily: FB, fontSize: '12px',
+            fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+            cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          + Quick Task
+        </button>
+      )}
+
       {/* Column header */}
       <div style={{
         display: 'flex', flexDirection: 'column', gap: '10px',
@@ -2367,6 +2453,31 @@ export default function IconCommandCenter() {
     subTasks: [], completionNotes: '',
   });
 
+  // Quick add: write directly to RTDB without opening the modal. Fields not
+  // captured here stay empty/unset on the wire — the user can fill them in
+  // later via the normal edit flow.
+  const handleQuickAdd = (assignee, title) => {
+    const trimmed = (title || '').trim();
+    if (!trimmed) return;
+    const newRef = push(ref(db, TASKS_PATH));
+    const record = {
+      id: newRef.key,
+      title: trimmed.toUpperCase(),
+      customer: '',
+      address: '',
+      assignee: assignee || 'robert',
+      category: 'customer',
+      priority: 'medium',
+      status: 'open',
+      dueDate: '',
+      subTasks: [],
+      completionNotes: '',
+      createdAt: new Date().toISOString(),
+    };
+    set(newRef, record)
+      .catch((e) => console.error('[command-center] quick add failed:', e));
+  };
+
   const batchGenerateAISummaries = useCallback(async () => {
     const targets = allTasks.filter((t) =>
       Array.isArray(t.subTasks) &&
@@ -2680,6 +2791,7 @@ export default function IconCommandCenter() {
                     tasks={tasksByPerson[person.id] || []}
                     doneCount={(completedTodayByPerson[person.id] || []).length}
                     onAdd={handleAdd}
+                    onQuickAdd={handleQuickAdd}
                     onEdit={setEditing}
                     onComplete={handleComplete}
                     onToggleSubTask={handleToggleSubTask}
@@ -2733,6 +2845,7 @@ export default function IconCommandCenter() {
               tasks={tasksByPerson[person.id] || []}
               doneCount={(completedTodayByPerson[person.id] || []).length}
               onAdd={handleAdd}
+              onQuickAdd={handleQuickAdd}
               onEdit={setEditing}
               onComplete={handleComplete}
               onToggleSubTask={handleToggleSubTask}
