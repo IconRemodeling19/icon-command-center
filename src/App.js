@@ -2630,8 +2630,8 @@ export default function IconCommandCenter() {
         }}
       >
         {robEstimatesView
-          ? <><ArrowLeft size={12} /> Tasks</>
-          : <><ClipboardList size={12} /> Estimates{robActiveCount > 0 ? ` · ${robActiveCount}` : ''}</>}
+          ? <><ArrowLeft size={12} />{isMobile ? null : ' Tasks'}</>
+          : <><ClipboardList size={12} />{isMobile ? (robActiveCount > 0 ? ` ${robActiveCount}` : '') : ` Estimates${robActiveCount > 0 ? ` · ${robActiveCount}` : ''}`}</>}
       </button>
     );
     const body = robEstimatesView ? (
@@ -2646,7 +2646,7 @@ export default function IconCommandCenter() {
     ) : null;
     return { headerToggleButton: toggle, bodyOverride: body };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [robEstimatesView, robActiveCount, robEstimates]);
+  }, [robEstimatesView, robActiveCount, robEstimates, isMobile]);
 
   // ── Loading / error gate ────────────────────────────────────────────────
   if (!loaded) {
