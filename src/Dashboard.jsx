@@ -136,14 +136,19 @@ function Card({ children, accent }) {
 }
 
 function Panel({ children }) {
+  // flexShrink:0 — panels live inside a flex-column wrapper with a bounded
+  // height (the surrounding <main> sets overflow:hidden + flex:1). Without
+  // this, panels would shrink to fit the viewport and their inner grids
+  // would render on top of the next panel.
   return (
     <div style={{
       background: 'rgba(9,9,11,0.55)',
       border: '1px solid rgba(63,63,70,0.6)',
       borderRadius: '8px',
       padding: '16px',
-      display: 'flex', flexDirection: 'column',
-      minHeight: 0,
+      display: 'block',
+      height: 'auto',
+      flexShrink: 0,
     }}>
       {children}
     </div>
@@ -542,12 +547,17 @@ export default function Dashboard({ allTasks, isMobile }) {
 
   const tasks = allTasks || fallbackTasks || [];
 
+  // Desktop: fill the remaining main height, scroll internally when the
+  // combined panel heights exceed the viewport. Mobile: natural document
+  // flow — the parent <main> is overflow:visible and the page scrolls.
   return (
     <div style={{
       padding: isMobile ? '12px' : '16px 24px',
-      display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px',
-      minHeight: 0,
-      ...(isMobile ? { overflow: 'visible' } : { overflowY: 'auto' }),
+      display: 'flex', flexDirection: 'column',
+      gap: isMobile ? '12px' : '16px',
+      ...(isMobile
+        ? { overflow: 'visible', height: 'auto' }
+        : { flex: 1, minHeight: 0, overflowY: 'auto' }),
     }}>
       <CrewStatus entries={entries} now={now} isMobile={isMobile} />
       <ActiveJobsToday orders={orders} isMobile={isMobile} />
