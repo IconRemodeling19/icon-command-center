@@ -2741,7 +2741,7 @@ export default function IconCommandCenter() {
                 ICON REMODELING GROUP
               </div>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(251,191,36,0.85)', marginTop: '5px', fontFamily: FB }}>
-                Operations Command Center
+                Icon Office Board
               </div>
             </div>
           </div>
