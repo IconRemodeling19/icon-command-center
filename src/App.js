@@ -9,6 +9,7 @@ import {
   db, authReady, ref, onValue, get, set, update, remove, push,
   storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
 } from './firebase';
+import Dashboard from './Dashboard';
 
 const TASKS_PATH = 'commandCenter/tasks';
 const ESTIMATES_PATH = 'estimates';
@@ -2171,6 +2172,9 @@ export default function IconCommandCenter() {
   const [isRobAuth] = useState(() =>
     typeof window !== 'undefined' && localStorage.getItem('isRobAuth') === 'true'
   );
+  // Top-level view: Dashboard is the default landing tab. Board renders the
+  // existing per-person task columns + Estimates exactly as before.
+  const [view, setView] = useState('dashboard');
 
   const handleTouchStart = (e) => {
     const t = e.touches[0];
@@ -2750,8 +2754,8 @@ export default function IconCommandCenter() {
             <StatBlock label="Done Today" value={doneTodayTotal} tone="emerald" />
           </div>
 
-          {/* Sync AI Summaries — Rob only, hidden in estimates view */}
-          {!robEstimatesView && isRobAuth && (
+          {/* Sync AI Summaries — Rob only, hidden in dashboard / estimates views */}
+          {view === 'board' && !robEstimatesView && isRobAuth && (
             <button
               onClick={batchGenerateAISummaries}
               title="Generate AI summaries for tasks missing them"
@@ -2776,8 +2780,55 @@ export default function IconCommandCenter() {
         </div>
       </header>
 
+      {/* ── VIEW TABS (Dashboard / Board) ── */}
+      <div style={{
+        position: 'relative', flexShrink: 0,
+        display: 'flex', alignItems: 'stretch',
+        background: '#09090b',
+        borderBottom: '1px solid #27272a',
+      }}>
+        {[
+          { id: 'dashboard', label: 'DASHBOARD' },
+          { id: 'board',     label: 'BOARD'     },
+        ].map((tab) => {
+          const active = view === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setView(tab.id)}
+              style={{
+                flex: isMobile ? 1 : '0 0 auto',
+                minHeight: '40px',
+                padding: isMobile ? '10px 12px' : '10px 28px',
+                background: active ? 'rgba(24,24,27,0.95)' : 'transparent',
+                border: 'none',
+                borderBottom: active ? '2px solid #fbbf24' : '2px solid transparent',
+                color: active ? '#fbbf24' : '#71717a',
+                fontFamily: FD, fontSize: '13px', fontWeight: 700,
+                letterSpacing: '0.18em', textTransform: 'uppercase',
+                cursor: 'pointer',
+                transition: 'color 0.2s, border-color 0.2s, background 0.2s',
+              }}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── DASHBOARD ── */}
+      {view === 'dashboard' && (
+        <main style={{
+          position: 'relative', flex: 1, minHeight: 0,
+          display: 'flex', flexDirection: 'column',
+          ...(isMobile ? { overflow: 'visible' } : { overflow: 'hidden' }),
+        }}>
+          <Dashboard allTasks={allTasks} isMobile={isMobile} />
+        </main>
+      )}
+
       {/* ── COLUMN MAIN ── */}
-      {isMobile ? (
+      {view === 'board' && (isMobile ? (
         <main style={{
           position: 'relative', flex: 1, minHeight: 0,
           display: 'flex', flexDirection: 'column', overflow: 'visible',
@@ -2905,7 +2956,7 @@ export default function IconCommandCenter() {
             />
           ))}
         </main>
-      )}
+      ))}
 
       {/* ── FOOTER ── */}
       <footer className="cc-footer" style={{
@@ -2922,21 +2973,23 @@ export default function IconCommandCenter() {
         <div style={{ fontFamily: FM }}>v1.1 · ICON-OPS</div>
       </footer>
 
-      {/* ── FLOATING ADD BUTTON (mobile) ── */}
-      <button
-        onClick={() => handleAdd()}
-        title="New task"
-        style={{
-          position: 'fixed', bottom: '68px', right: '16px',
-          width: '56px', height: '56px', borderRadius: '50%',
-          background: '#fbbf24', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          zIndex: 40,
-        }}
-      >
-        <Plus size={24} strokeWidth={3} color="#09090b" />
-      </button>
+      {/* ── FLOATING ADD BUTTON (mobile) — only on the board view ── */}
+      {view === 'board' && (
+        <button
+          onClick={() => handleAdd()}
+          title="New task"
+          style={{
+            position: 'fixed', bottom: '68px', right: '16px',
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: '#fbbf24', border: 'none', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+            zIndex: 40,
+          }}
+        >
+          <Plus size={24} strokeWidth={3} color="#09090b" />
+        </button>
+      )}
 
       {/* ── FLASH ── */}
       {flash && (

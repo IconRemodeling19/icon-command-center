@@ -29,8 +29,32 @@ const authReady = signInAnonymously(auth)
     throw err;
   });
 
+// Secondary Firebase app for icon-timeclock-8f75a (crew time entries +
+// active work orders). Read-only from this app — used by Dashboard.
+//
+// Note: this project does NOT have Firebase Auth (Identity Platform) set up
+// — the icon-timeclock-app itself never calls signInAnonymously on its own
+// project, only on the cross-project orders app. Calling signInAnonymously
+// here produces "auth/configuration-not-found". We therefore skip auth and
+// expose a pre-resolved `timeclockAuthReady` so downstream code can keep
+// the same `authReady.then(() => onValue(...))` shape.
+const timeclockConfig = {
+  apiKey: "AIzaSyAIlZvU_5Mjdf3oFG4zM63kSTQOvYjip8g",
+  authDomain: "icon-timeclock-8f75a.firebaseapp.com",
+  databaseURL: "https://icon-timeclock-8f75a-default-rtdb.firebaseio.com",
+  projectId: "icon-timeclock-8f75a",
+  storageBucket: "icon-timeclock-8f75a.firebasestorage.app",
+  messagingSenderId: "969024137570",
+  appId: "1:969024137570:web:07476a2111a3951b44e43b",
+};
+
+const timeclockApp = initializeApp(timeclockConfig, "timeclock");
+const timeclockDb = getDatabase(timeclockApp);
+const timeclockAuthReady = Promise.resolve();
+
 export {
   app, db, auth, authReady,
   ref, onValue, get, set, update, remove, push,
   storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
+  timeclockDb, timeclockAuthReady,
 };
