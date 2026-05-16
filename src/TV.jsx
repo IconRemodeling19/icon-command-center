@@ -384,6 +384,23 @@ export default function TV() {
     };
   }, []);
 
+  useEffect(() => {
+    const keepAwake = setInterval(() => {
+      document.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+      // Also simulate a click to satisfy more aggressive screensaver detection
+      document.dispatchEvent(new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window
+      }));
+    }, 20000);
+    return () => clearInterval(keepAwake);
+  }, []);
+
   const openTasks = useMemo(
     () => allTasks.filter((t) => (t.status || 'open') !== 'done'),
     [allTasks]
