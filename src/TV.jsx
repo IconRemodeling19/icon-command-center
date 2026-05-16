@@ -206,7 +206,7 @@ function TaskCard({ task, scale }) {
 
 function PersonColumn({ person, tasks, scale }) {
   const PAGE_SIZE = 6;
-  const PAGE_MS = 8000;
+  const PAGE_MS = 60000;
   const FADE_MS = 400;
 
   const pages = useMemo(() => {
