@@ -401,6 +401,19 @@ export default function TV() {
     return () => clearInterval(keepAwake);
   }, []);
 
+  useEffect(() => {
+    const videos = document.querySelectorAll('video');
+    videos.forEach(v => {
+      v.play().catch(() => {});
+    });
+    const interval = setInterval(() => {
+      videos.forEach(v => {
+        if (v.paused) v.play().catch(() => {});
+      });
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
   const openTasks = useMemo(
     () => allTasks.filter((t) => (t.status || 'open') !== 'done'),
     [allTasks]
@@ -429,6 +442,15 @@ export default function TV() {
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
     }}>
+      <video
+        style={{ position: 'fixed', opacity: 0, width: '1px', height: '1px', top: 0, left: 0, pointerEvents: 'none' }}
+        autoPlay
+        loop
+        muted
+        playsInline
+      >
+        <source src="data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAuFtZGF0" type="video/mp4" />
+      </video>
       {/* Blueprint grid overlay */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.04,
