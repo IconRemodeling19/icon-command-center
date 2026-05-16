@@ -140,6 +140,35 @@ function TaskCard({ task, scale }) {
       }}>
         {task.title}
       </div>
+      {(() => {
+        if (task.priority !== 'urgent' && task.priority !== 'high') return null;
+        const summary = (task.subTaskSummary || '').trim();
+        const desc = (task.description || '').trim();
+        let text = '';
+        if (task.priority === 'urgent') {
+          if (summary) {
+            text = summary;
+          } else if (desc) {
+            text = desc.length > 100 ? desc.slice(0, 100) + '...' : desc;
+          }
+        } else {
+          const source = summary || desc;
+          if (source) {
+            text = source.length > 80 ? source.slice(0, 80) + '...' : source;
+          }
+        }
+        if (!text) return null;
+        return (
+          <div style={{
+            fontFamily: FB, fontWeight: 500, color: '#f4f4f5',
+            fontSize: 'clamp(11px, 0.9vw, 14px)',
+            lineHeight: 1.35, wordBreak: 'break-word',
+            opacity: task.priority === 'urgent' ? 0.7 : 0.6,
+          }}>
+            {text}
+          </div>
+        );
+      })()}
       {task.customer && (
         <div style={{
           fontFamily: FB, fontWeight: 600, color: '#fbbf24',
@@ -176,6 +205,46 @@ function TaskCard({ task, scale }) {
 }
 
 function PersonColumn({ person, tasks, scale }) {
+  const PAGE_SIZE = 6;
+  const PAGE_MS = 8000;
+  const FADE_MS = 400;
+
+  const pages = useMemo(() => {
+    if (tasks.length <= PAGE_SIZE) return [tasks];
+    const out = [];
+    for (let i = 0; i < tasks.length; i += PAGE_SIZE) {
+      out.push(tasks.slice(i, i + PAGE_SIZE));
+    }
+    return out;
+  }, [tasks]);
+
+  const [pageIdx, setPageIdx] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    if (pageIdx >= pages.length) {
+      setPageIdx(0);
+      setVisible(true);
+    }
+  }, [pages.length, pageIdx]);
+
+  useEffect(() => {
+    if (pages.length <= 1) {
+      setVisible(true);
+      return;
+    }
+    const interval = setInterval(() => {
+      setVisible(false);
+      setTimeout(() => {
+        setPageIdx((prev) => (prev + 1) % pages.length);
+        setVisible(true);
+      }, FADE_MS);
+    }, PAGE_MS);
+    return () => clearInterval(interval);
+  }, [pages.length]);
+
+  const currentTasks = pages[pageIdx] || [];
+
   return (
     <div style={{
       position: 'relative',
@@ -224,6 +293,8 @@ function PersonColumn({ person, tasks, scale }) {
         padding: 'clamp(8px, 0.8vw, 18px)',
         display: 'flex', flexDirection: 'column',
         gap: scale.cardGap,
+        opacity: visible ? 1 : 0,
+        transition: 'opacity 0.4s ease',
       }}>
         {tasks.length === 0 ? (
           <div style={{
@@ -234,7 +305,7 @@ function PersonColumn({ person, tasks, scale }) {
             ALL CLEAR
           </div>
         ) : (
-          tasks.map((t) => <TaskCard key={t.id} task={t} scale={scale} />)
+          currentTasks.map((t) => <TaskCard key={t.id} task={t} scale={scale} />)
         )}
       </div>
     </div>
