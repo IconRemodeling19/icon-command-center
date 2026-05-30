@@ -1,3 +1,17 @@
+/* ── PWA / iOS home-screen support (added) ── */
+* { -webkit-tap-highlight-color: transparent; }
+input, select, textarea { font-size: 16px !important; }
+html, body {
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  background-color: #0d1117;
+}
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* ── END PWA support ── */
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
