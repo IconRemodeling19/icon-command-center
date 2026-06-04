@@ -1916,7 +1916,6 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           <input
             type="date"
             value={form.dueDate || todayISO()}
-            defaultValue={todayISO()}
             onChange={e => setForm({ ...form, dueDate: e.target.value })}
             style={inputStyle}
           />

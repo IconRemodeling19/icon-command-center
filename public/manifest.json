@@ -1,13 +1,19 @@
 {
-  "name": "Icon Remodeling \u2014 Command Center",
+  "id": "/",
+  "name": "Icon Remodeling — Command Center",
   "short_name": "Command Center",
+  "description": "Live office board, crew status, and estimates for Icon Remodeling Group.",
+  "lang": "en-US",
+  "dir": "ltr",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0d1117",
   "theme_color": "#0d1117",
   "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

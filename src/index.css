@@ -10,6 +10,13 @@ body {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
+/* Keyboard focus ring — visible for keyboard/AT users, suppressed for mouse.
+   Inputs in this app set outline:none inline, so restore an accessible
+   focus indicator here. */
+:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
 /* ── END PWA support ── */
 
 body {
