@@ -515,7 +515,7 @@ export default function Dashboard({ allTasks, isMobile }) {
     let unsub = () => {};
     timeclockAuthReady.then(() => {
       if (cancelled) return;
-      const r = ref(timeclockDb, ORDERS_PATH);
+      const r = ref(db, ORDERS_PATH);
       unsub = onValue(
         r,
         (snap) => { if (!cancelled) setOrders(snap.val() || {}); },
