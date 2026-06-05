@@ -100,7 +100,7 @@ function SectionLabel({ label, accent, Icon, count }) {
       {Icon && <Icon size={14} color={accent} strokeWidth={2.5} />}
       <span style={{
         fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.22em',
-        color: '#e4e4e7', fontWeight: 700, fontFamily: FB,
+        color: '#ffffff', fontWeight: 700, fontFamily: FB,
       }}>
         {label}
       </span>
@@ -213,7 +213,7 @@ function CrewStatus({ entries, now, isMobile }) {
             <Card key={member} accent={isIn ? '#34d399' : 'rgba(63,63,70,0.6)'}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span style={{
-                  fontFamily: FD, fontWeight: 700, color: '#f4f4f5',
+                  fontFamily: FD, fontWeight: 700, color: '#ffffff',
                   fontSize: '15px', letterSpacing: '0.06em',
                 }}>
                   {member.toUpperCase()}
@@ -235,7 +235,7 @@ function CrewStatus({ entries, now, isMobile }) {
                   </span>
                 ) : (
                   <span style={{
-                    fontFamily: FB, fontSize: '10px', color: '#71717a',
+                    fontFamily: FB, fontSize: '10px', color: '#a0aec0',
                     letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 600,
                   }}>
                     Not clocked in
@@ -245,14 +245,14 @@ function CrewStatus({ entries, now, isMobile }) {
               {isIn && (
                 <>
                   <div style={{
-                    fontFamily: FB, color: '#e4e4e7', fontSize: '13px',
+                    fontFamily: FB, color: '#ffffff', fontSize: '13px',
                     fontWeight: 600, wordBreak: 'break-word',
                   }}>
-                    {status.job || <span style={{ color: '#71717a', fontWeight: 500, fontStyle: 'italic' }}>No job specified</span>}
+                    {status.job || <span style={{ color: '#a0aec0', fontWeight: 500, fontStyle: 'italic' }}>No job specified</span>}
                   </div>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    color: '#a1a1aa', fontFamily: FM, fontSize: '11px',
+                    color: '#a0aec0', fontFamily: FM, fontSize: '11px',
                     fontVariantNumeric: 'tabular-nums',
                   }}>
                     <Clock size={11} strokeWidth={2.4} />
@@ -291,7 +291,7 @@ function ActiveJobsToday({ orders, isMobile }) {
       {todays.length === 0 ? (
         <div style={{
           padding: '20px 4px', textAlign: 'center',
-          color: '#71717a', fontFamily: FB, fontSize: '13px',
+          color: '#a0aec0', fontFamily: FB, fontSize: '13px',
         }}>
           No work orders scheduled for today.
         </div>
@@ -322,7 +322,7 @@ function ActiveJobsToday({ orders, isMobile }) {
                   </span>
                   {customer && (
                     <span style={{
-                      fontFamily: FB, color: '#a1a1aa', fontSize: '11px',
+                      fontFamily: FB, color: '#a0aec0', fontSize: '11px',
                       fontWeight: 600, letterSpacing: '0.02em',
                       whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       maxWidth: '50%',
@@ -332,10 +332,10 @@ function ActiveJobsToday({ orders, isMobile }) {
                   )}
                 </div>
                 <div style={{
-                  fontFamily: FB, color: '#f4f4f5', fontSize: '14px',
+                  fontFamily: FB, color: '#ffffff', fontSize: '14px',
                   fontWeight: 600, lineHeight: 1.3, wordBreak: 'break-word',
                 }}>
-                  {address || <span style={{ color: '#71717a', fontStyle: 'italic' }}>No address</span>}
+                  {address || <span style={{ color: '#a0aec0', fontStyle: 'italic' }}>No address</span>}
                 </div>
                 {members.length > 0 && (
                   <div style={{
@@ -347,7 +347,7 @@ function ActiveJobsToday({ orders, isMobile }) {
                         padding: '2px 8px', borderRadius: '4px',
                         background: 'rgba(255,255,255,0.06)',
                         border: '1px solid rgba(63,63,70,0.7)',
-                        color: '#d4d4d8', fontFamily: FB,
+                        color: '#ffffff', fontFamily: FB,
                         fontSize: '10px', fontWeight: 600,
                         letterSpacing: '0.08em', textTransform: 'uppercase',
                       }}>
@@ -386,7 +386,7 @@ function OfficeBoardSnapshot({ allTasks, isMobile }) {
       {due.length === 0 ? (
         <div style={{
           padding: '20px 4px', textAlign: 'center',
-          color: '#71717a', fontFamily: FB, fontSize: '13px',
+          color: '#a0aec0', fontFamily: FB, fontSize: '13px',
           letterSpacing: '0.04em',
         }}>
           All clear for today.
@@ -413,7 +413,7 @@ function OfficeBoardSnapshot({ allTasks, isMobile }) {
                     {overdue ? 'Overdue' : 'Due Today'}
                   </span>
                   <span style={{
-                    fontFamily: FM, fontWeight: 700, color: '#a1a1aa',
+                    fontFamily: FM, fontWeight: 700, color: '#a0aec0',
                     fontSize: '11px', letterSpacing: '0.06em',
                     fontVariantNumeric: 'tabular-nums',
                   }}>
@@ -421,7 +421,7 @@ function OfficeBoardSnapshot({ allTasks, isMobile }) {
                   </span>
                 </div>
                 <div style={{
-                  fontFamily: FB, fontWeight: 700, color: '#f4f4f5',
+                  fontFamily: FB, fontWeight: 700, color: '#ffffff',
                   fontSize: '14px', lineHeight: 1.3, wordBreak: 'break-word',
                 }}>
                   {t.title || '(Untitled task)'}
@@ -470,10 +470,10 @@ function OfficeBoardSnapshot({ allTasks, isMobile }) {
 function CustomerPortalPlaceholder() {
   return (
     <Panel>
-      <SectionLabel label="Customer Portal" accent="#a1a1aa" />
+      <SectionLabel label="Customer Portal" accent="#a0aec0" />
       <div style={{
         padding: '24px 4px', textAlign: 'center',
-        color: '#52525b', fontFamily: FB, fontSize: '13px',
+        color: '#a0aec0', fontFamily: FB, fontSize: '13px',
         fontStyle: 'italic', letterSpacing: '0.04em',
       }}>
         Customer Portal — coming soon

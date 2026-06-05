@@ -19,7 +19,7 @@ const PRIORITIES = {
 urgent: { label: 'URGENT', color: '#ef4444', bg: 'rgba(239,68,68,0.18)', border: 'rgba(239,68,68,0.55)' },
 high: { label: 'HIGH', color: '#f59e0b', bg: 'rgba(245,158,11,0.18)', border: 'rgba(245,158,11,0.55)' },
 medium: { label: 'MEDIUM', color: '#ffffff', bg: 'rgba(255,255,255,0.10)', border: 'rgba(255,255,255,0.40)' },
-low: { label: 'LOW', color: '#a1a1aa', bg: 'rgba(161,161,170,0.10)', border: 'rgba(161,161,170,0.40)' },
+low: { label: 'LOW', color: '#a0aec0', bg: 'rgba(161,161,170,0.10)', border: 'rgba(161,161,170,0.40)' },
 };
 const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -58,7 +58,7 @@ return () => clearInterval(t);
 }, []);
 return (
 <div style={{
-fontFamily: FD, fontWeight: 700, color: '#f4f4f5',
+fontFamily: FD, fontWeight: 700, color: '#ffffff',
 fontSize: 'clamp(22px, 2.4vw, 56px)',
 letterSpacing: '0.04em', fontVariantNumeric: 'tabular-nums',
 lineHeight: 1,
@@ -120,7 +120,7 @@ fontSize: scale.meta, letterSpacing: '0.18em', whiteSpace: 'nowrap',
 {due && (
 <span style={{
 fontFamily: FM, fontWeight: 700,
-color: due === 'TODAY' ? '#fcd34d' : '#a1a1aa',
+color: due === 'TODAY' ? '#fcd34d' : '#a0aec0',
 fontSize: scale.meta, letterSpacing: '0.06em',
 fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
 }}>
@@ -129,7 +129,7 @@ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
 )}
 </div>
 <div style={{
-fontFamily: FB, fontWeight: 700, color: '#f4f4f5',
+fontFamily: FB, fontWeight: 700, color: '#ffffff',
 fontSize: scale.title, lineHeight: 1.2,
 wordBreak: 'break-word',
 }}>
@@ -148,7 +148,7 @@ if (source) { text = source.length > 80 ? source.slice(0, 80) + '...' : source; 
 }
 if (!text) return null;
 return (
-<div style={{ fontFamily: FB, fontWeight: 500, color: '#f4f4f5', fontSize: 'clamp(11px, 0.9vw, 14px)', lineHeight: 1.35, wordBreak: 'break-word', opacity: task.priority === 'urgent' ? 0.7 : 0.6 }}>
+<div style={{ fontFamily: FB, fontWeight: 500, color: '#ffffff', fontSize: 'clamp(11px, 0.9vw, 14px)', lineHeight: 1.35, wordBreak: 'break-word', opacity: task.priority === 'urgent' ? 0.7 : 0.6 }}>
 {text}
 </div>
 );
@@ -164,7 +164,7 @@ const summary = (task.subTaskSummary || '').trim();
 if (!summary && subCount === 0) return null;
 const text = summary ? `↳ ${summary}` : `↳ ${subCount} sub-task${subCount === 1 ? '' : 's'} pending`;
 return (
-<div style={{ fontFamily: FB, fontStyle: 'italic', fontWeight: 500, color: '#a1a1aa', fontSize: scale.customer, lineHeight: 1.3, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+<div style={{ fontFamily: FB, fontStyle: 'italic', fontWeight: 500, color: '#a0aec0', fontSize: scale.customer, lineHeight: 1.3, wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
 {text}
 </div>
 );
@@ -226,10 +226,10 @@ gap: '12px',
 {person.name}
 </div>
 <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-<span style={{ fontFamily: FD, fontWeight: 700, color: '#f4f4f5', fontSize: `calc(${scale.colHeader} * 0.7)`, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+<span style={{ fontFamily: FD, fontWeight: 700, color: '#ffffff', fontSize: `calc(${scale.colHeader} * 0.7)`, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
 {tasks.length}
 </span>
-<span style={{ fontFamily: FB, fontWeight: 600, color: '#71717a', fontSize: scale.meta, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+<span style={{ fontFamily: FB, fontWeight: 600, color: '#a0aec0', fontSize: scale.meta, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
 {tasks.length === 1 ? 'TASK' : 'TASKS'}
 </span>
 </div>
@@ -244,7 +244,7 @@ opacity: visible ? 1 : 0,
 transition: 'opacity 0.4s ease',
 }}>
 {tasks.length === 0 ? (
-<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#52525b', fontFamily: FD, fontWeight: 600, fontSize: scale.title, letterSpacing: '0.18em', textAlign: 'center' }}>
+<div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a0aec0', fontFamily: FD, fontWeight: 600, fontSize: scale.title, letterSpacing: '0.18em', textAlign: 'center' }}>
 ALL CLEAR
 </div>
 ) : (
@@ -264,7 +264,7 @@ const link = document.createElement('link');
 link.href = FONT_LINK; link.rel = 'stylesheet';
 document.head.appendChild(link);
 const style = document.createElement('style');
-style.textContent = `html, body, #root { margin: 0; padding: 0; height: 100%; background: #090B10; overflow: hidden; } *, *::before, *::after { box-sizing: border-box; } ::-webkit-scrollbar { display: none; }`;
+style.textContent = `html, body, #root { margin: 0; padding: 0; height: 100%; background: #0a0a0f; overflow: hidden; } *, *::before, *::after { box-sizing: border-box; } ::-webkit-scrollbar { display: none; }`;
 document.head.appendChild(style);
 return () => {
 try { document.head.removeChild(link); } catch (e) {}
@@ -340,8 +340,8 @@ const scale = useMemo(() => scaleFor(totalOpen), [totalOpen]);
 return (
 <div style={{
 position: 'fixed', inset: 0,
-background: 'linear-gradient(145deg, #0d1218, #090B10, #141b22)',
-color: '#f4f4f5', fontFamily: FB,
+background: 'linear-gradient(145deg, #0a0a0f, #0a0a0f, #1a1f2e)',
+color: '#ffffff', fontFamily: FB,
 display: 'flex', flexDirection: 'column',
 overflow: 'hidden',
 }}>
@@ -359,9 +359,9 @@ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '24
 }}>
 <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(14px, 1.4vw, 28px)', minWidth: 0 }}>
 <div style={{ width: 'clamp(40px, 3.4vw, 80px)', height: 'clamp(40px, 3.4vw, 80px)', background: '#fbbf24', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-<span style={{ color: '#09090b', fontFamily: FD, fontWeight: 700, fontSize: 'clamp(20px, 1.8vw, 44px)' }}>I</span>
+<span style={{ color: '#0a0a0f', fontFamily: FD, fontWeight: 700, fontSize: 'clamp(20px, 1.8vw, 44px)' }}>I</span>
 </div>
-<div style={{ fontFamily: FD, fontWeight: 700, color: '#f4f4f5', fontSize: 'clamp(18px, 2vw, 48px)', letterSpacing: '0.06em', lineHeight: 1.05, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+<div style={{ fontFamily: FD, fontWeight: 700, color: '#ffffff', fontSize: 'clamp(18px, 2vw, 48px)', letterSpacing: '0.06em', lineHeight: 1.05, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
 ICON REMODELING GROUP<span style={{ color: 'rgba(251,191,36,0.85)', margin: '0 0.4em' }}>—</span>OPERATIONS COMMAND CENTER
 </div>
 </div>
@@ -384,7 +384,7 @@ padding: 'clamp(8px, 0.8vw, 18px) clamp(28px, 2.5vw, 56px)',
 borderTop: '1px solid rgba(251,191,36,0.25)',
 background: 'rgba(9,11,16,0.85)',
 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-fontFamily: FB, color: '#71717a',
+fontFamily: FB, color: '#a0aec0',
 fontSize: 'clamp(11px, 0.95vw, 20px)',
 letterSpacing: '0.16em', textTransform: 'uppercase',
 }}>

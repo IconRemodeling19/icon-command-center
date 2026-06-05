@@ -79,7 +79,7 @@ const PRIORITIES = {
   urgent: { label: 'URGENT', bar: '#ef4444', text: '#f87171', pulse: true  },
   high:   { label: 'HIGH',   bar: '#f59e0b', text: '#fbbf24', pulse: false },
   medium: { label: 'MEDIUM', bar: '#0ea5e9', text: '#38bdf8', pulse: false },
-  low:    { label: 'LOW',    bar: '#52525b', text: '#a1a1aa', pulse: false },
+  low:    { label: 'LOW',    bar: '#a0aec0', text: '#a0aec0', pulse: false },
 };
 const PRIORITY_RANK = { urgent: 0, high: 1, medium: 2, low: 3 };
 
@@ -178,13 +178,13 @@ function ReturnHomeButton() {
 }
 
 function StatBlock({ label, value, tone }) {
-  const colors = { red: '#f87171', amber: '#fbbf24', zinc: '#f4f4f5', emerald: '#34d399' };
+  const colors = { red: '#f87171', amber: '#fbbf24', zinc: '#ffffff', emerald: '#34d399' };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 20px', borderLeft: '1px solid #27272a' }}>
-      <span style={{ fontSize: '2rem', fontWeight: 700, fontFamily: FD, color: colors[tone] || '#f4f4f5', fontVariantNumeric: 'tabular-nums' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px 20px', borderLeft: '1px solid #3d4557' }}>
+      <span style={{ fontSize: '2rem', fontWeight: 700, fontFamily: FD, color: colors[tone] || '#ffffff', fontVariantNumeric: 'tabular-nums' }}>
         {String(value).padStart(2, '0')}
       </span>
-      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '2px', fontFamily: FB }}>
+      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginTop: '2px', fontFamily: FB }}>
         {label}
       </span>
     </div>
@@ -199,10 +199,10 @@ function LiveClock() {
   }, []);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-      <span style={{ fontSize: '2rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+      <span style={{ fontSize: '2rem', fontWeight: 700, color: '#ffffff', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
         {now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
       </span>
-      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '6px', fontFamily: FB }}>
+      <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginTop: '6px', fontFamily: FB }}>
         {now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })}
       </span>
     </div>
@@ -224,14 +224,14 @@ function SubTaskRow({ subTask, onToggle }) {
       <span style={{
         flexShrink: 0,
         width: '16px', height: '16px', borderRadius: '3px',
-        border: `1.5px solid ${done ? '#34d399' : '#52525b'}`,
+        border: `1.5px solid ${done ? '#34d399' : '#a0aec0'}`,
         background: done ? '#34d399' : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        {done && <Check size={11} color="#09090b" strokeWidth={3} />}
+        {done && <Check size={11} color="#0a0a0f" strokeWidth={3} />}
       </span>
       <span style={{
-        fontSize: '12px', color: done ? '#71717a' : '#d4d4d8',
+        fontSize: '12px', color: done ? '#a0aec0' : '#ffffff',
         textDecoration: done ? 'line-through' : 'none',
         lineHeight: 1.4, fontFamily: FB, wordBreak: 'break-word',
       }}>
@@ -260,8 +260,8 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
       style={{
         position: 'relative', borderRadius: '8px', cursor: 'pointer',
         overflow: 'hidden', marginBottom: '10px',
-        background: hov ? '#1c1c1f' : 'rgba(24,24,27,0.75)',
-        border: `1px solid ${hov ? '#3f3f46' : '#27272a'}`,
+        background: hov ? '#1a1f2e' : 'rgba(24,24,27,0.75)',
+        border: `1px solid ${hov ? '#3d4557' : '#3d4557'}`,
         transition: 'all 0.15s',
         transform: hov ? 'translateY(-1px)' : 'none',
         boxShadow: hov ? '0 4px 14px rgba(0,0,0,0.35)' : 'none',
@@ -289,7 +289,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
               title="Mark complete"
               style={{
                 opacity: hov ? 1 : 0, width: '36px', height: '36px', borderRadius: '50%',
-                border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
+                border: '1px solid #3d4557', background: 'transparent', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'opacity 0.15s', flexShrink: 0,
               }}
@@ -301,16 +301,16 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
               title="Edit task"
               style={{
                 opacity: hov ? 1 : 0, width: '36px', height: '36px', borderRadius: '50%',
-                border: '1px solid #3f3f46', background: 'transparent', cursor: 'pointer',
+                border: '1px solid #3d4557', background: 'transparent', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'opacity 0.15s', flexShrink: 0,
               }}
             >
-              <Edit2 size={14} color="#a1a1aa" />
+              <Edit2 size={14} color="#a0aec0" />
             </button>
             <span style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '20px', height: '20px', color: '#71717a',
+              width: '20px', height: '20px', color: '#a0aec0',
               transition: 'transform 0.18s ease',
               transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
             }}>
@@ -320,7 +320,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
         </div>
 
         {/* Title */}
-        <div style={{ fontSize: '14px', fontWeight: 600, color: '#f4f4f5', lineHeight: 1.35, marginBottom: '8px', fontFamily: FB }}>
+        <div style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', lineHeight: 1.35, marginBottom: '8px', fontFamily: FB }}>
           {task.title}
         </div>
 
@@ -344,7 +344,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
         {/* Notes full text — expanded only */}
         {expanded && hasNotes && (
           <div style={{
-            fontSize: '12px', color: '#d4d4d8', lineHeight: 1.5, fontFamily: FB,
+            fontSize: '12px', color: '#ffffff', lineHeight: 1.5, fontFamily: FB,
             background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.18)',
             borderRadius: '6px', padding: '8px 10px', marginBottom: '10px',
             whiteSpace: 'pre-wrap', wordBreak: 'break-word',
@@ -355,16 +355,16 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
 
         {/* Customer */}
         {task.customer && (
-          <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: task.address ? '4px' : '10px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FB }}>
-            <Hash size={11} color="#52525b" />
+          <div style={{ fontSize: '12px', color: '#a0aec0', marginBottom: task.address ? '4px' : '10px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: FB }}>
+            <Hash size={11} color="#a0aec0" />
             {task.customer}
           </div>
         )}
 
         {/* Address */}
         {task.address && (
-          <div style={{ fontSize: '12px', color: '#a1a1aa', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '5px', fontFamily: FB }}>
-            <MapPin size={11} color="#52525b" style={{ marginTop: '2px', flexShrink: 0 }} />
+          <div style={{ fontSize: '12px', color: '#a0aec0', marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '5px', fontFamily: FB }}>
+            <MapPin size={11} color="#a0aec0" style={{ marginTop: '2px', flexShrink: 0 }} />
             <span style={{ wordBreak: 'break-word' }}>{task.address}</span>
           </div>
         )}
@@ -373,17 +373,17 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
         {subTasks.length > 0 && !expanded && (
           <div style={{
             marginBottom: '10px', padding: '8px',
-            background: 'rgba(9,9,11,0.55)', border: '1px solid #27272a', borderRadius: '6px',
+            background: 'rgba(9,9,11,0.55)', border: '1px solid #3d4557', borderRadius: '6px',
           }}>
             <div style={{
-              fontSize: '10px', fontWeight: 700, color: '#71717a',
+              fontSize: '10px', fontWeight: 700, color: '#a0aec0',
               textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: FB,
               marginBottom: '6px',
             }}>
               Sub-Task Summary
             </div>
             <div style={{
-              fontSize: '12px', color: '#d4d4d8', lineHeight: 1.4, fontFamily: FB,
+              fontSize: '12px', color: '#ffffff', lineHeight: 1.4, fontFamily: FB,
               whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             }}>
               {task.subTaskSummary || `↳ ${subTasks.length} sub-task${subTasks.length === 1 ? '' : 's'}`}
@@ -393,19 +393,19 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
         {subTasks.length > 0 && expanded && (
           <div style={{
             marginBottom: '10px', padding: '8px',
-            background: 'rgba(9,9,11,0.55)', border: '1px solid #27272a', borderRadius: '6px',
+            background: 'rgba(9,9,11,0.55)', border: '1px solid #3d4557', borderRadius: '6px',
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: '6px',
             }}>
               <span style={{
-                fontSize: '10px', fontWeight: 700, color: '#71717a',
+                fontSize: '10px', fontWeight: 700, color: '#a0aec0',
                 textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: FB,
               }}>
                 Sub Tasks
               </span>
-              <span style={{ fontSize: '11px', color: '#a1a1aa', fontFamily: FM, fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ fontSize: '11px', color: '#a0aec0', fontFamily: FM, fontVariantNumeric: 'tabular-nums' }}>
                 {doneCount} of {subTasks.length} complete
               </span>
             </div>
@@ -430,7 +430,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
           </span>
           <span style={{
             fontSize: '11px', fontWeight: 700, fontFamily: FM,
-            color: isToday ? '#fcd34d' : '#71717a',
+            color: isToday ? '#fcd34d' : '#a0aec0',
             fontVariantNumeric: 'tabular-nums',
           }}>
             {formatDueDate(task.dueDate)}
@@ -470,14 +470,14 @@ function PersonColumn({
     <div className="cc-column" style={{
       display: 'flex', flexDirection: 'column',
       height: isMobile ? 'auto' : '100%', minHeight: 0,
-      background: '#09090b', border: '1px solid rgba(39,39,42,0.85)',
+      background: '#0a0a0f', border: '1px solid rgba(39,39,42,0.85)',
       borderRadius: '8px', overflow: isMobile ? 'visible' : 'hidden',
     }}>
       {/* Quick Task row — always at the top, above the column header */}
       {quickOpen ? (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '6px',
-          padding: '8px 10px', borderBottom: '1px solid #27272a',
+          padding: '8px 10px', borderBottom: '1px solid #3d4557',
           background: 'rgba(245,158,11,0.08)', flexShrink: 0,
         }}>
           <input
@@ -493,8 +493,8 @@ function PersonColumn({
             spellCheck={true}
             style={{
               flex: 1, minWidth: 0, minHeight: '36px', padding: '8px 10px',
-              background: '#09090b', border: '1px solid #fbbf24',
-              borderRadius: '6px', color: '#f4f4f5',
+              background: '#0a0a0f', border: '1px solid #fbbf24',
+              borderRadius: '6px', color: '#ffffff',
               fontFamily: FB, fontSize: '13px', outline: 'none',
             }}
           />
@@ -514,8 +514,8 @@ function PersonColumn({
             type="button" onClick={cancelQuick} title="Cancel"
             style={{
               minWidth: '36px', minHeight: '36px',
-              background: 'transparent', border: '1px solid #3f3f46',
-              borderRadius: '6px', color: '#a1a1aa', cursor: 'pointer',
+              background: 'transparent', border: '1px solid #3d4557',
+              borderRadius: '6px', color: '#a0aec0', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}
@@ -545,8 +545,8 @@ function PersonColumn({
       {/* Column header */}
       <div style={{
         display: 'flex', flexDirection: 'column', gap: '10px',
-        padding: '12px 16px', borderBottom: '1px solid #27272a',
-        background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
+        padding: '12px 16px', borderBottom: '1px solid #3d4557',
+        background: 'linear-gradient(to bottom, #1a1f2e, #0a0a0f)', flexShrink: 0,
       }}>
         {/* Row 1: dot + name/role · task count · add button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -564,20 +564,20 @@ function PersonColumn({
               flexShrink: 0,
             }} />
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '22px', fontWeight: 700, color: '#ffffff', fontFamily: FD, letterSpacing: '0.04em', lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {person.name}
               </div>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginTop: '4px', fontFamily: FB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginTop: '4px', fontFamily: FB, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {person.role}
               </div>
             </div>
           </div>
           {headerToggleButton}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', flexShrink: 0 }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ffffff', fontFamily: FD, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
               {tasks.length}
             </span>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#71717a', fontFamily: FB }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#a0aec0', fontFamily: FB }}>
               tasks
             </span>
           </div>
@@ -586,9 +586,9 @@ function PersonColumn({
             title="Add task"
             style={{
               width: '44px', height: '44px', borderRadius: '6px',
-              border: '1px solid #3f3f46', background: 'transparent',
+              border: '1px solid #3d4557', background: 'transparent',
               cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#a1a1aa', flexShrink: 0,
+              color: '#a0aec0', flexShrink: 0,
             }}
           >
             <Plus size={18} />
@@ -633,7 +633,7 @@ function PersonColumn({
           WebkitOverflowScrolling: 'touch', padding: '12px',
         }}>
           {tasks.length === 0 ? (
-            <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
+            <div style={{ textAlign: 'center', color: '#a0aec0', fontSize: '13px', padding: '32px 0', fontFamily: FB }}>
               No open tasks
             </div>
           ) : (
@@ -804,7 +804,7 @@ function AddressInput({ value, onChange, placeholder, style }) {
           position: 'fixed',
           top: anchor.top, left: anchor.left, width: anchor.width,
           zIndex: 70,
-          background: '#0d0d10', border: '1px solid #3f3f46',
+          background: '#0d0d10', border: '1px solid #3d4557',
           borderRadius: '6px', maxHeight: '240px', overflowY: 'auto',
           boxShadow: '0 12px 32px rgba(0,0,0,0.6)',
         }}>
@@ -817,7 +817,7 @@ function AddressInput({ value, onChange, placeholder, style }) {
                 width: '100%', textAlign: 'left',
                 padding: '10px 12px', background: 'transparent', border: 'none',
                 borderBottom: i < suggestions.length - 1 ? '1px solid #1f1f23' : 'none',
-                cursor: 'pointer', color: '#e4e4e7',
+                cursor: 'pointer', color: '#ffffff',
                 fontFamily: FB, fontSize: '14px', textTransform: 'uppercase',
                 letterSpacing: '0.02em',
                 display: 'flex', alignItems: 'center', gap: '8px',
@@ -825,7 +825,7 @@ function AddressInput({ value, onChange, placeholder, style }) {
               onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(245,158,11,0.08)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
-              <MapPin size={12} color="#71717a" />
+              <MapPin size={12} color="#a0aec0" />
               <span>{s.description}</span>
             </button>
           ))}
@@ -883,9 +883,9 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
       style={{
         position: 'relative',
         opacity: dim,
-        background: archived ? 'rgba(24,24,27,0.55)' : (hov ? '#1c1c1f' : 'rgba(24,24,27,0.85)'),
-        border: `1px solid ${hov ? '#3f3f46' : '#27272a'}`,
-        borderLeft: `3px solid ${archived ? '#3f3f46' : '#fbbf24'}`,
+        background: archived ? 'rgba(24,24,27,0.55)' : (hov ? '#1a1f2e' : 'rgba(24,24,27,0.85)'),
+        border: `1px solid ${hov ? '#3d4557' : '#3d4557'}`,
+        borderLeft: `3px solid ${archived ? '#3d4557' : '#fbbf24'}`,
         borderRadius: '8px',
         padding: '12px 14px',
         marginBottom: '10px',
@@ -897,7 +897,7 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{
-            fontSize: '15px', fontWeight: 700, color: '#f4f4f5',
+            fontSize: '15px', fontWeight: 700, color: '#ffffff',
             fontFamily: FB, lineHeight: 1.25, wordBreak: 'break-word',
           }}>
             {estimate.customerName || '(NO NAME)'}
@@ -922,7 +922,7 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
               title="Mark complete"
               style={{
                 width: '36px', height: '36px', borderRadius: '6px',
-                border: '1px solid #3f3f46', background: 'transparent',
+                border: '1px solid #3d4557', background: 'transparent',
                 cursor: 'pointer', color: '#34d399',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
@@ -935,8 +935,8 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
             title={archived ? 'Edit (or revise)' : 'Edit estimate'}
             style={{
               width: '36px', height: '36px', borderRadius: '6px',
-              border: '1px solid #3f3f46', background: 'transparent',
-              cursor: 'pointer', color: '#a1a1aa',
+              border: '1px solid #3d4557', background: 'transparent',
+              cursor: 'pointer', color: '#a0aec0',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
@@ -947,7 +947,7 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
             title="Delete estimate"
             style={{
               width: '36px', height: '36px', borderRadius: '6px',
-              border: '1px solid #3f3f46', background: 'transparent',
+              border: '1px solid #3d4557', background: 'transparent',
               cursor: 'pointer', color: '#f87171',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
@@ -958,8 +958,8 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
       </div>
 
       {estimate.address && (
-        <div style={{ fontSize: '12px', color: '#a1a1aa', display: 'flex', gap: '6px', alignItems: 'flex-start', fontFamily: FB }}>
-          <MapPin size={11} color="#52525b" style={{ marginTop: '2px', flexShrink: 0 }} />
+        <div style={{ fontSize: '12px', color: '#a0aec0', display: 'flex', gap: '6px', alignItems: 'flex-start', fontFamily: FB }}>
+          <MapPin size={11} color="#a0aec0" style={{ marginTop: '2px', flexShrink: 0 }} />
           <span style={{ wordBreak: 'break-word' }}>{estimate.address}</span>
         </div>
       )}
@@ -1028,7 +1028,7 @@ function EstimateCard({ estimate, archived, onToggleComplete, onEdit, onDelete }
             display: 'inline-flex', alignItems: 'center', gap: '4px',
             padding: '2px 8px', borderRadius: '4px',
             background: 'rgba(161,161,170,0.10)', border: '1px solid rgba(161,161,170,0.30)',
-            color: '#d4d4d8', fontSize: '11px', fontWeight: 600, fontFamily: FB,
+            color: '#ffffff', fontSize: '11px', fontWeight: 600, fontFamily: FB,
             letterSpacing: '0.04em',
           }}>
             <Paperclip size={10} />
@@ -1076,7 +1076,7 @@ function EstimatesView({ estimates, onAdd, onEdit, onEditArchived, onToggleCompl
       <SectionLabel label={`Active Estimates (${active.length})`} accent="#fbbf24" />
       {active.length === 0 ? (
         <div style={{
-          textAlign: 'center', color: '#52525b', fontSize: '12px',
+          textAlign: 'center', color: '#a0aec0', fontSize: '12px',
           padding: '20px 0', fontFamily: FB, letterSpacing: '0.1em', textTransform: 'uppercase',
         }}>
           No active estimates
@@ -1094,11 +1094,11 @@ function EstimatesView({ estimates, onAdd, onEdit, onEditArchived, onToggleCompl
         ))
       )}
 
-      <div style={{ height: '1px', background: '#27272a', margin: '20px 0 14px' }} />
-      <SectionLabel label={`Completed Estimates (${archived.length})`} accent="#52525b" />
+      <div style={{ height: '1px', background: '#3d4557', margin: '20px 0 14px' }} />
+      <SectionLabel label={`Completed Estimates (${archived.length})`} accent="#a0aec0" />
       {archived.length === 0 ? (
         <div style={{
-          textAlign: 'center', color: '#3f3f46', fontSize: '12px',
+          textAlign: 'center', color: '#3d4557', fontSize: '12px',
           padding: '12px 0', fontFamily: FB, letterSpacing: '0.1em', textTransform: 'uppercase',
         }}>
           Archive empty
@@ -1127,7 +1127,7 @@ function SectionLabel({ label, accent }) {
       <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: accent }} />
       <span style={{
         fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.22em',
-        color: '#a1a1aa', fontWeight: 700, fontFamily: FB,
+        color: '#a0aec0', fontWeight: 700, fontFamily: FB,
       }}>
         {label}
       </span>
@@ -1142,7 +1142,7 @@ function RevisionPromptModal({ estimate, onAnswer, onClose }) {
   return (
     <ModalShell title="Edit Archived Estimate" accent="rgba(245,158,11,0.5)" maxWidth="420px" onClose={onClose}>
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ color: '#e4e4e7', fontSize: '14px', fontFamily: FB, lineHeight: 1.5 }}>
+        <div style={{ color: '#ffffff', fontSize: '14px', fontFamily: FB, lineHeight: 1.5 }}>
           Is this a revision to an estimate already sent to{' '}
           <span style={{ color: '#fbbf24', fontWeight: 700 }}>
             {(estimate.customerName || 'this customer').toUpperCase()}
@@ -1153,9 +1153,9 @@ function RevisionPromptModal({ estimate, onAnswer, onClose }) {
             onClick={() => onAnswer(false)}
             style={{
               flex: 1, minWidth: '120px', padding: '12px 16px', minHeight: '44px',
-              background: 'transparent', border: '1px solid #3f3f46',
+              background: 'transparent', border: '1px solid #3d4557',
               borderRadius: '6px', cursor: 'pointer',
-              color: '#d4d4d8', fontFamily: FB, fontWeight: 700, fontSize: '13px',
+              color: '#ffffff', fontFamily: FB, fontWeight: 700, fontSize: '13px',
               letterSpacing: '0.08em', textTransform: 'uppercase',
             }}
           >
@@ -1167,7 +1167,7 @@ function RevisionPromptModal({ estimate, onAnswer, onClose }) {
               flex: 1, minWidth: '120px', padding: '12px 16px', minHeight: '44px',
               background: '#f59e0b', border: 'none',
               borderRadius: '6px', cursor: 'pointer',
-              color: '#09090b', fontFamily: FB, fontWeight: 700, fontSize: '13px',
+              color: '#0a0a0f', fontFamily: FB, fontWeight: 700, fontSize: '13px',
               letterSpacing: '0.08em', textTransform: 'uppercase',
             }}
           >
@@ -1352,7 +1352,7 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
         </Field>
 
         <div>
-          <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginBottom: '8px', fontFamily: FB }}>
+          <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginBottom: '8px', fontFamily: FB }}>
             Blueprints / Design Plans
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -1370,8 +1370,8 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
                     flex: '1 1 30%', minHeight: '44px',
                     padding: '10px 12px', borderRadius: '6px', cursor: 'pointer',
                     background: checked ? 'rgba(56,189,248,0.15)' : 'transparent',
-                    border: `1px solid ${checked ? '#38bdf8' : '#3f3f46'}`,
-                    color: checked ? '#7dd3fc' : '#a1a1aa',
+                    border: `1px solid ${checked ? '#38bdf8' : '#3d4557'}`,
+                    color: checked ? '#7dd3fc' : '#a0aec0',
                     fontFamily: FB, fontSize: '13px', fontWeight: 700,
                     letterSpacing: '0.06em', textTransform: 'uppercase',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
@@ -1423,10 +1423,10 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
 
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', fontFamily: FB }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', fontFamily: FB }}>
               Attachments
             </span>
-            <span style={{ fontSize: '11px', color: '#52525b', fontFamily: FM }}>
+            <span style={{ fontSize: '11px', color: '#a0aec0', fontFamily: FM }}>
               {(form.attachments || []).length} file(s) · max 20 MB each
             </span>
           </div>
@@ -1465,14 +1465,14 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
                 <div key={a.url} style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
                   padding: '8px 10px', borderRadius: '6px',
-                  background: 'rgba(9,9,11,0.7)', border: '1px solid #27272a',
+                  background: 'rgba(9,9,11,0.7)', border: '1px solid #3d4557',
                 }}>
-                  <Paperclip size={12} color="#71717a" />
+                  <Paperclip size={12} color="#a0aec0" />
                   <a
                     href={a.url} target="_blank" rel="noopener noreferrer"
                     style={{
                       flex: 1, minWidth: 0,
-                      color: '#e4e4e7', fontFamily: FB, fontSize: '13px',
+                      color: '#ffffff', fontFamily: FB, fontSize: '13px',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       textDecoration: 'none',
                     }}
@@ -1485,7 +1485,7 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
                     title="Remove file"
                     style={{
                       width: '32px', height: '32px',
-                      background: 'transparent', border: '1px solid #3f3f46',
+                      background: 'transparent', border: '1px solid #3d4557',
                       borderRadius: '4px', cursor: 'pointer', color: '#f87171',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
@@ -1502,7 +1502,7 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
       {/* Footer */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 20px', borderTop: '1px solid #27272a',
+        padding: '14px 20px', borderTop: '1px solid #3d4557',
         flexWrap: 'wrap', gap: '8px',
       }}>
         {!isNew ? (
@@ -1516,7 +1516,7 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={onClose}
-            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
+            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
           >
             Cancel
           </button>
@@ -1524,10 +1524,10 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
             onClick={submit}
             style={{
               padding: '12px 20px', minHeight: '44px',
-              background: canSave ? '#f59e0b' : '#27272a',
+              background: canSave ? '#f59e0b' : '#3d4557',
               border: 'none', borderRadius: '6px',
               cursor: canSave ? 'pointer' : 'not-allowed',
-              color: canSave ? '#09090b' : '#52525b',
+              color: canSave ? '#0a0a0f' : '#a0aec0',
               fontSize: '14px', fontWeight: 700,
               letterSpacing: '0.06em', fontFamily: FB,
             }}
@@ -1543,16 +1543,16 @@ function EstimateModal({ estimate, isRevision, onSave, onDelete, onClose }) {
 // ─── Modal styles ──────────────────────────────────────────────────────────────
 
 const inputStyle = {
-  width: '100%', background: '#09090b', border: '1px solid #3f3f46',
+  width: '100%', background: '#0a0a0f', border: '1px solid #3d4557',
   borderRadius: '6px', padding: '12px 14px', minHeight: '44px', fontSize: '16px',
-  color: '#f4f4f5', fontFamily: FB, outline: 'none', boxSizing: 'border-box',
+  color: '#ffffff', fontFamily: FB, outline: 'none', boxSizing: 'border-box',
 };
 const upperInputStyle = { ...inputStyle, textTransform: 'uppercase' };
 
 function Field({ label, children }) {
   return (
     <label style={{ display: 'block' }}>
-      <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginBottom: '6px', fontFamily: FB }}>
+      <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginBottom: '6px', fontFamily: FB }}>
         {label}
       </span>
       {children}
@@ -1560,7 +1560,7 @@ function Field({ label, children }) {
   );
 }
 
-function ModalShell({ title, accent = '#3f3f46', maxWidth = '480px', onClose, children }) {
+function ModalShell({ title, accent = '#3d4557', maxWidth = '480px', onClose, children }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 60,
@@ -1569,20 +1569,20 @@ function ModalShell({ title, accent = '#3f3f46', maxWidth = '480px', onClose, ch
       padding: '16px',
     }}>
       <div style={{
-        background: '#18181b', border: `1px solid ${accent}`,
+        background: '#1a1f2e', border: `1px solid ${accent}`,
         borderRadius: '10px', width: '100%', maxWidth,
         boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
         maxHeight: 'calc(100vh - 32px)', display: 'flex', flexDirection: 'column',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #27272a' }}>
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #3d4557' }}>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', fontFamily: FD, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {title}
           </span>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
             aria-label="Close"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '44px', minHeight: '44px', padding: '8px' }}
           >
             <X size={20} />
           </button>
@@ -1787,10 +1787,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
                     onClick={() => setTaskType(opt.value)}
                     style={{
                       flex: 1, minHeight: '44px', padding: '10px 12px',
-                      background: active ? 'rgba(245,158,11,0.18)' : '#09090b',
-                      border: `1px solid ${active ? '#fbbf24' : '#3f3f46'}`,
+                      background: active ? 'rgba(245,158,11,0.18)' : '#0a0a0f',
+                      border: `1px solid ${active ? '#fbbf24' : '#3d4557'}`,
                       borderRadius: '6px', cursor: 'pointer',
-                      color: active ? '#fbbf24' : '#a1a1aa',
+                      color: active ? '#fbbf24' : '#a0aec0',
                       fontFamily: FD, fontSize: '13px', fontWeight: 700,
                       letterSpacing: '0.06em', textTransform: 'uppercase',
                       transition: 'background 0.12s, border-color 0.12s, color 0.12s',
@@ -1815,7 +1815,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
         <Field label="Customer / Job">
           {isNew && taskType === 'active_job' && !ordersError && selectedOrderId !== '__other__' ? (
             ordersLoading || orders === null ? (
-              <div style={{ ...inputStyle, color: '#71717a', display: 'flex', alignItems: 'center' }}>
+              <div style={{ ...inputStyle, color: '#a0aec0', display: 'flex', alignItems: 'center' }}>
                 Loading jobs…
               </div>
             ) : (
@@ -1867,11 +1867,11 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
                   title={onlyOne ? 'At least one person must be assigned' : ''}
                   style={{
                     flex: 1, minWidth: '64px', minHeight: '44px', padding: '10px 12px',
-                    background: active ? 'rgba(245,158,11,0.18)' : '#09090b',
-                    border: `1px solid ${active ? '#fbbf24' : '#3f3f46'}`,
+                    background: active ? 'rgba(245,158,11,0.18)' : '#0a0a0f',
+                    border: `1px solid ${active ? '#fbbf24' : '#3d4557'}`,
                     borderRadius: '6px',
                     cursor: onlyOne ? 'not-allowed' : 'pointer',
-                    color: active ? '#fbbf24' : '#a1a1aa',
+                    color: active ? '#fbbf24' : '#a0aec0',
                     fontFamily: FD, fontSize: '14px', fontWeight: 700,
                     letterSpacing: '0.06em', textTransform: 'uppercase',
                     transition: 'background 0.12s, border-color 0.12s, color 0.12s',
@@ -1887,10 +1887,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
               title="Assign to all"
               style={{
                 flex: 1, minWidth: '64px', minHeight: '44px', padding: '10px 12px',
-                background: allSelected ? 'rgba(245,158,11,0.18)' : '#09090b',
-                border: `1px solid ${allSelected ? '#fbbf24' : '#3f3f46'}`,
+                background: allSelected ? 'rgba(245,158,11,0.18)' : '#0a0a0f',
+                border: `1px solid ${allSelected ? '#fbbf24' : '#3d4557'}`,
                 borderRadius: '6px', cursor: 'pointer',
-                color: allSelected ? '#fbbf24' : '#a1a1aa',
+                color: allSelected ? '#fbbf24' : '#a0aec0',
                 fontFamily: FD, fontSize: '14px', fontWeight: 700,
                 letterSpacing: '0.06em', textTransform: 'uppercase',
                 transition: 'background 0.12s, border-color 0.12s, color 0.12s',
@@ -1942,10 +1942,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
         {/* Sub Tasks */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', fontFamily: FB }}>
+            <span style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', fontFamily: FB }}>
               Sub Tasks
             </span>
-            <span style={{ fontSize: '11px', color: '#52525b', fontFamily: FM }}>
+            <span style={{ fontSize: '11px', color: '#a0aec0', fontFamily: FM }}>
               {form.subTasks.length} added
             </span>
           </div>
@@ -1968,7 +1968,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
                     title="Remove sub task"
                     style={{
                       flexShrink: 0, width: '40px', height: '40px',
-                      background: 'transparent', border: '1px solid #3f3f46',
+                      background: 'transparent', border: '1px solid #3d4557',
                       borderRadius: '6px', cursor: 'pointer', color: '#f87171',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}
@@ -1998,10 +1998,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
       {/* Footer */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 16px', borderTop: '1px solid #27272a',
+        padding: '12px 16px', borderTop: '1px solid #3d4557',
         flexWrap: 'wrap', gap: '8px',
         position: 'sticky', bottom: 0,
-        background: '#18181b', flexShrink: 0, zIndex: 2,
+        background: '#1a1f2e', flexShrink: 0, zIndex: 2,
       }}>
         {!isNew ? (
           <button onClick={() => onDelete(task.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: '14px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', minHeight: '44px', padding: '8px 12px', fontFamily: FB }}>
@@ -2012,7 +2012,7 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a1a1aa', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
+            style={{ padding: '12px 16px', minHeight: '44px', background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', fontSize: '14px', fontWeight: 600, fontFamily: FB }}
           >
             Cancel
           </button>
@@ -2020,10 +2020,10 @@ function TaskModal({ task, onSave, onDelete, onClose }) {
             onClick={submit}
             style={{
               padding: '12px 20px', minHeight: '44px',
-              background: canSave ? '#f59e0b' : '#27272a',
+              background: canSave ? '#f59e0b' : '#3d4557',
               border: 'none', borderRadius: '6px',
               cursor: canSave ? 'pointer' : 'not-allowed',
-              color: canSave ? '#09090b' : '#52525b',
+              color: canSave ? '#0a0a0f' : '#a0aec0',
               fontSize: '14px', fontWeight: 700,
               letterSpacing: '0.06em', fontFamily: FB,
             }}
@@ -2045,16 +2045,16 @@ function NotesModal({ task, onClose }) {
         <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#fbbf24', marginBottom: '6px', fontFamily: FB }}>
           Task
         </div>
-        <div style={{ fontSize: '15px', fontWeight: 600, color: '#f4f4f5', fontFamily: FB, marginBottom: '14px', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '15px', fontWeight: 600, color: '#ffffff', fontFamily: FB, marginBottom: '14px', lineHeight: 1.4 }}>
           {task.title}
         </div>
-        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a', marginBottom: '6px', fontFamily: FB }}>
+        <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0', marginBottom: '6px', fontFamily: FB }}>
           Notes
         </div>
         <div style={{
-          fontSize: '13px', color: '#d4d4d8', fontFamily: FB,
+          fontSize: '13px', color: '#ffffff', fontFamily: FB,
           whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6,
-          background: '#09090b', border: '1px solid rgba(245,158,11,0.25)',
+          background: '#0a0a0f', border: '1px solid rgba(245,158,11,0.25)',
           borderRadius: '6px', padding: '12px',
         }}>
           {task.completionNotes}
@@ -2072,7 +2072,7 @@ function CompletedTasksModal({ person, completedToday, onClose }) {
     <ModalShell title={`${person.name}'s Completed Tasks — ${todayLabel}`} accent="rgba(52,211,153,0.4)" maxWidth="520px" onClose={onClose}>
       <div style={{ padding: '20px' }}>
         {completedToday.length === 0 ? (
-          <div style={{ textAlign: 'center', color: '#52525b', fontSize: '13px', padding: '24px 0', fontFamily: FB }}>
+          <div style={{ textAlign: 'center', color: '#a0aec0', fontSize: '13px', padding: '24px 0', fontFamily: FB }}>
             No tasks completed today
           </div>
         ) : (
@@ -2081,13 +2081,13 @@ function CompletedTasksModal({ person, completedToday, onClose }) {
               const time = new Date(t.completedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
               return (
                 <div key={`${t.id}-${t.completedAt}`} style={{
-                  background: 'rgba(9,9,11,0.6)', border: '1px solid #27272a',
+                  background: 'rgba(9,9,11,0.6)', border: '1px solid #3d4557',
                   borderRadius: '6px', padding: '10px 12px',
                 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#f4f4f5', fontFamily: FB, marginBottom: '4px', lineHeight: 1.3 }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#ffffff', fontFamily: FB, marginBottom: '4px', lineHeight: 1.3 }}>
                     {t.title}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#71717a', fontFamily: FB }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#a0aec0', fontFamily: FB }}>
                     <span>{t.customer}</span>
                     <span style={{ fontFamily: FM, color: '#34d399', fontVariantNumeric: 'tabular-nums' }}>
                       {time}
@@ -2269,8 +2269,8 @@ export default function IconCommandCenter() {
       * { box-sizing: border-box; }
       ::-webkit-scrollbar { width: 4px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 2px; }
-      html, body { margin: 0; padding: 0; height: 100%; background: #080c12; }
+      ::-webkit-scrollbar-thumb { background: #3d4557; border-radius: 2px; }
+      html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0f; }
 
       /* Native date input — invert calendar icon for dark theme */
       input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
@@ -2624,9 +2624,9 @@ export default function IconCommandCenter() {
           display: 'inline-flex', alignItems: 'center', gap: '6px',
           padding: '6px 10px', minHeight: '32px',
           background: robEstimatesView ? 'transparent' : 'rgba(245,158,11,0.12)',
-          border: `1px solid ${robEstimatesView ? '#3f3f46' : 'rgba(245,158,11,0.5)'}`,
+          border: `1px solid ${robEstimatesView ? '#3d4557' : 'rgba(245,158,11,0.5)'}`,
           borderRadius: '6px', cursor: 'pointer',
-          color: robEstimatesView ? '#a1a1aa' : '#fbbf24',
+          color: robEstimatesView ? '#a0aec0' : '#fbbf24',
           fontFamily: FB, fontSize: '11px', fontWeight: 700,
           letterSpacing: '0.1em', textTransform: 'uppercase',
           flexShrink: 0,
@@ -2658,17 +2658,17 @@ export default function IconCommandCenter() {
         <ReturnHomeButton />
         <div style={{
           minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)',
-          background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
-          color: '#a1a1aa', display: 'flex', alignItems: 'center',
+          background: 'linear-gradient(145deg, #0a0a0f, #0a0a0f, #1a1f2e)',
+          color: '#a0aec0', display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexDirection: 'column', gap: '12px',
           fontFamily: FB,
         }}>
           <div style={{
             width: '44px', height: '44px', borderRadius: '50%',
-            border: '3px solid #27272a', borderTopColor: '#fbbf24',
+            border: '3px solid #3d4557', borderTopColor: '#fbbf24',
             animation: 'ccSpin 0.9s linear infinite',
           }} />
-          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#71717a' }}>
+          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.2em', color: '#a0aec0' }}>
             Connecting to Firebase…
           </div>
           <style>{`@keyframes ccSpin { to { transform: rotate(360deg); } }`}</style>
@@ -2683,16 +2683,16 @@ export default function IconCommandCenter() {
         <ReturnHomeButton />
         <div style={{
           minHeight: 'calc(100vh - 36px)', height: 'calc(100vh - 36px)',
-          background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
-          color: '#f4f4f5', display: 'flex', alignItems: 'center',
+          background: 'linear-gradient(145deg, #0a0a0f, #0a0a0f, #1a1f2e)',
+          color: '#ffffff', display: 'flex', alignItems: 'center',
           justifyContent: 'center', flexDirection: 'column', gap: '12px',
           fontFamily: FB, padding: '24px', textAlign: 'center',
         }}>
           <AlertTriangle size={32} color="#f87171" />
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', fontFamily: FD, letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', fontFamily: FD, letterSpacing: '0.04em' }}>
             COULD NOT CONNECT TO DATABASE
           </div>
-          <div style={{ fontSize: '13px', color: '#a1a1aa', maxWidth: '380px', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '13px', color: '#a0aec0', maxWidth: '380px', lineHeight: 1.5 }}>
             Check your connection and reload the page. Tasks may be temporarily unavailable.
           </div>
         </div>
@@ -2708,8 +2708,8 @@ export default function IconCommandCenter() {
       ...(isMobile
         ? { overflow: 'visible' }
         : { height: 'calc(100vh - 36px)', overflow: 'hidden' }),
-      background: 'linear-gradient(145deg, #0d1218, #080c12, #141b22)',
-      color: '#f4f4f5', display: 'flex', flexDirection: 'column',
+      background: 'linear-gradient(145deg, #0a0a0f, #0a0a0f, #1a1f2e)',
+      color: '#ffffff', display: 'flex', flexDirection: 'column',
       fontFamily: FB, position: 'relative',
     }}>
       {/* Blueprint grid overlay */}
@@ -2721,8 +2721,8 @@ export default function IconCommandCenter() {
 
       {/* ── HEADER ── */}
       <header style={{
-        position: 'relative', borderBottom: '1px solid #27272a',
-        background: 'linear-gradient(to bottom, #18181b, #09090b)', flexShrink: 0,
+        position: 'relative', borderBottom: '1px solid #3d4557',
+        background: 'linear-gradient(to bottom, #1a1f2e, #0a0a0f)', flexShrink: 0,
       }}>
         <div className="cc-header-row" style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
 
@@ -2733,10 +2733,10 @@ export default function IconCommandCenter() {
               clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: '#09090b', fontWeight: 700, fontSize: '24px', fontFamily: FD }}>I</span>
+              <span style={{ color: '#0a0a0f', fontWeight: 700, fontSize: '24px', fontFamily: FD }}>I</span>
             </div>
             <div>
-              <div style={{ fontSize: '1.65rem', fontWeight: 700, color: '#f4f4f5', letterSpacing: '0.04em', fontFamily: FD, lineHeight: 1 }}>
+              <div style={{ fontSize: '1.65rem', fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em', fontFamily: FD, lineHeight: 1 }}>
                 ICON REMODELING GROUP
               </div>
               <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(251,191,36,0.85)', marginTop: '5px', fontFamily: FB }}>
@@ -2783,8 +2783,8 @@ export default function IconCommandCenter() {
       <div style={{
         position: 'relative', flexShrink: 0,
         display: 'flex', alignItems: 'stretch',
-        background: '#09090b',
-        borderBottom: '1px solid #27272a',
+        background: '#0a0a0f',
+        borderBottom: '1px solid #3d4557',
       }}>
         {[
           { id: 'dashboard', label: 'DASHBOARD' },
@@ -2802,7 +2802,7 @@ export default function IconCommandCenter() {
                 background: active ? 'rgba(24,24,27,0.95)' : 'transparent',
                 border: 'none',
                 borderBottom: active ? '2px solid #fbbf24' : '2px solid transparent',
-                color: active ? '#fbbf24' : '#71717a',
+                color: active ? '#fbbf24' : '#a0aec0',
                 fontFamily: FD, fontSize: '13px', fontWeight: 700,
                 letterSpacing: '0.18em', textTransform: 'uppercase',
                 cursor: 'pointer',
@@ -2835,8 +2835,8 @@ export default function IconCommandCenter() {
           {/* Person tabs */}
           <div style={{
             display: 'flex',
-            background: '#09090b',
-            borderBottom: '1px solid #27272a',
+            background: '#0a0a0f',
+            borderBottom: '1px solid #3d4557',
             flexShrink: 0,
           }}>
             {TEAM.map((person, i) => {
@@ -2851,7 +2851,7 @@ export default function IconCommandCenter() {
                     background: active ? 'rgba(24,24,27,0.95)' : 'transparent',
                     border: 'none',
                     borderBottom: active ? `2px solid ${acc.dot}` : '2px solid transparent',
-                    color: active ? acc.text : '#71717a',
+                    color: active ? acc.text : '#a0aec0',
                     fontFamily: FD, fontSize: '14px', fontWeight: 700,
                     letterSpacing: '0.1em', textTransform: 'uppercase',
                     cursor: 'pointer',
@@ -2908,7 +2908,7 @@ export default function IconCommandCenter() {
               <div style={{
                 position: 'absolute', left: '2px', top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#52525b', opacity: 0.55,
+                color: '#a0aec0', opacity: 0.55,
                 pointerEvents: 'none',
                 animation: 'iconDot 2.5s ease-in-out infinite',
               }}>
@@ -2919,7 +2919,7 @@ export default function IconCommandCenter() {
               <div style={{
                 position: 'absolute', right: '2px', top: '50%',
                 transform: 'translateY(-50%)',
-                color: '#52525b', opacity: 0.55,
+                color: '#a0aec0', opacity: 0.55,
                 pointerEvents: 'none',
                 animation: 'iconDot 2.5s ease-in-out infinite',
               }}>
@@ -2959,10 +2959,10 @@ export default function IconCommandCenter() {
 
       {/* ── FOOTER ── */}
       <footer className="cc-footer" style={{
-        position: 'relative', borderTop: '1px solid #27272a',
+        position: 'relative', borderTop: '1px solid #3d4557',
         background: 'rgba(9,9,11,0.6)', padding: '9px 24px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        fontSize: '12px', color: '#71717a', fontFamily: FB, flexShrink: 0,
+        fontSize: '12px', color: '#a0aec0', fontFamily: FB, flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', animation: 'iconDot 2s ease-in-out infinite' }} />
@@ -2986,7 +2986,7 @@ export default function IconCommandCenter() {
             zIndex: 40,
           }}
         >
-          <Plus size={24} strokeWidth={3} color="#09090b" />
+          <Plus size={24} strokeWidth={3} color="#0a0a0f" />
         </button>
       )}
 
