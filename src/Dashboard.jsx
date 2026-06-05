@@ -509,7 +509,7 @@ export default function Dashboard({ allTasks, isMobile }) {
     return () => { cancelled = true; unsub(); };
   }, []);
 
-  // orders/ — icon-timeclock-8f75a RTDB (per spec)
+  // orders/ — icon-work-orders RTDB (active jobs/work orders live here)
   useEffect(() => {
     let cancelled = false;
     let unsub = () => {};
