@@ -513,7 +513,7 @@ export default function Dashboard({ allTasks, isMobile }) {
   useEffect(() => {
     let cancelled = false;
     let unsub = () => {};
-    timeclockAuthReady.then(() => {
+    authReady.then(() => {
       if (cancelled) return;
       const r = ref(db, ORDERS_PATH);
       unsub = onValue(
