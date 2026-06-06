@@ -2712,12 +2712,6 @@ export default function IconCommandCenter() {
       color: '#ffffff', display: 'flex', flexDirection: 'column',
       fontFamily: FB, position: 'relative',
     }}>
-      {/* Blueprint grid overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.025,
-        backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)',
-        backgroundSize: '40px 40px',
-      }} />
 
       {/* ── HEADER ── */}
       <header style={{
