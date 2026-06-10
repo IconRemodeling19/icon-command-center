@@ -12,7 +12,7 @@ const FM = "'JetBrains Mono', 'Consolas', monospace";
 const CREW = ['Luis', 'Azael', 'Oswaldo', 'Andres', 'Vicente', 'Gabriel', 'Geovanny', 'Bryan'];
 
 const TASKS_PATH = 'commandCenter/tasks';
-const TIMECLOCK_PATH = 'timeclock/entries';
+const TIMECLOCK_PATH = 'punches';
 const ORDERS_PATH = 'orders';
 
 const ACCENTS = {
@@ -156,7 +156,7 @@ function Panel({ children }) {
 }
 
 function CrewStatus({ entries, now, isMobile }) {
-  // entries is whatever lives at timeclock/entries — could be a single
+  // entries is whatever lives at punches — could be a single
   // map keyed by id, or nested by employee. We flatten to a list of
   // entry objects with normalized fields, then filter to "today, open".
   const flat = useMemo(() => {
@@ -179,21 +179,48 @@ function CrewStatus({ entries, now, isMobile }) {
   const today = todayISO();
 
   const currentByName = useMemo(() => {
-    const result = {};
+    // The Time Clock writes an action log to the punches node: each punch is
+    // its own record ({ employee, action, timestamp, jobName, ... }) - there
+    // is no paired clockIn/clockOut entry. Crew state = the latest punch
+    // today: in-type means on the clock, temp-out means away but returning,
+    // out-type means done. For temp-out we recover the job from the latest
+    // in-punch so the card still shows where the person will return to.
+    const latest = {};
+    const latestIn = {};
+    const classify = (action) => {
+      const a = String(action || '').toUpperCase();
+      if (!a) return null;
+      if (/TEMP/.test(a)) return 'tempOut';
+      if (/OUT|END/.test(a)) return 'out';
+      if (/IN|START/.test(a)) return 'in';
+      return null;
+    };
     for (const e of flat) {
       const name = pick(e, ['name', 'employee', 'employeeName', 'userName', 'crew']);
       if (!name) continue;
-      const clockInMs = tsToMs(pick(e, ['clockIn', 'clockInTime', 'startTime', 'timestamp', 'startedAt']));
-      const clockOutMs = tsToMs(pick(e, ['clockOut', 'clockOutTime', 'endTime', 'endedAt']));
-      const dateField = pick(e, ['date', 'dayDate']) || msToISODate(clockInMs);
+      const ts = tsToMs(pick(e, ['timestamp', 'clockIn', 'clockInTime', 'startTime', 'startedAt']));
+      if (!ts) continue;
+      const dateField = pick(e, ['date', 'dayDate']) || msToISODate(ts);
       if (dateField !== today) continue;
-      if (clockOutMs) continue; // already clocked out
-      const job = pick(e, ['job', 'jobName', 'jobAddress', 'jobTitle', 'address', 'location', 'site', 'orderName']);
-      // Keep the latest clock-in per crew member (in case of duplicate punches)
-      const prior = result[name.toLowerCase()];
-      if (!prior || (clockInMs || 0) > (prior.clockInMs || 0)) {
-        result[name.toLowerCase()] = { name, job, clockInMs };
+      const key = name.toLowerCase();
+      if (!latest[key] || ts > latest[key].ts) latest[key] = { e, ts, name };
+      if (classify(e.action) === 'in' && (!latestIn[key] || ts > latestIn[key].ts)) {
+        latestIn[key] = { e, ts };
       }
+    }
+    const result = {};
+    for (const key of Object.keys(latest)) {
+      const { e, ts, name } = latest[key];
+      let state = classify(e.action);
+      if (state == null) {
+        // Legacy paired-entry shape: open if no clock-out recorded.
+        state = tsToMs(pick(e, ['clockOut', 'clockOutTime', 'endTime', 'endedAt'])) ? 'out' : 'in';
+      }
+      if (state === 'out') continue;
+      const jobSource = state === 'tempOut' && latestIn[key] ? latestIn[key].e : e;
+      const job = pick(jobSource, ['jobName', 'jobAddress', 'job', 'jobTitle', 'address', 'location', 'site', 'orderName']);
+      const reason = state === 'tempOut' ? pick(e, ['reason', 'tempOutReason', 'note', 'notes']) : undefined;
+      result[key] = { name, job, clockInMs: ts, state, reason };
     }
     return result;
   }, [flat, today]);
@@ -208,9 +235,11 @@ function CrewStatus({ entries, now, isMobile }) {
       }}>
         {CREW.map((member) => {
           const status = currentByName[member.toLowerCase()];
-          const isIn = !!status;
+          const isIn = status && status.state === 'in';
+          const isTempOut = status && status.state === 'tempOut';
+          const accent = isIn ? '#34d399' : isTempOut ? '#fbbf24' : 'rgba(63,63,70,0.6)';
           return (
-            <Card key={member} accent={isIn ? '#34d399' : 'rgba(63,63,70,0.6)'}>
+            <Card key={member} accent={accent}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span style={{
                   fontFamily: FD, fontWeight: 700, color: '#ffffff',
@@ -233,6 +262,21 @@ function CrewStatus({ entries, now, isMobile }) {
                     }} />
                     On the clock
                   </span>
+                ) : isTempOut ? (
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '2px 8px', borderRadius: '999px',
+                    background: 'rgba(251,191,36,0.12)',
+                    border: '1px solid rgba(251,191,36,0.45)',
+                    color: '#fbbf24', fontFamily: FB, fontWeight: 700,
+                    fontSize: '10px', letterSpacing: '0.16em', textTransform: 'uppercase',
+                  }}>
+                    <span style={{
+                      width: '6px', height: '6px', borderRadius: '50%',
+                      background: '#fbbf24', boxShadow: '0 0 6px rgba(251,191,36,0.8)',
+                    }} />
+                    Temp out
+                  </span>
                 ) : (
                   <span style={{
                     fontFamily: FB, fontSize: '10px', color: '#a0aec0',
@@ -242,7 +286,7 @@ function CrewStatus({ entries, now, isMobile }) {
                   </span>
                 )}
               </div>
-              {isIn && (
+              {(isIn || isTempOut) && (
                 <>
                   <div style={{
                     fontFamily: FB, color: '#ffffff', fontSize: '13px',
@@ -252,12 +296,17 @@ function CrewStatus({ entries, now, isMobile }) {
                   </div>
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: '6px',
-                    color: '#a0aec0', fontFamily: FM, fontSize: '11px',
+                    color: isTempOut ? '#fbbf24' : '#a0aec0', fontFamily: FM, fontSize: '11px',
                     fontVariantNumeric: 'tabular-nums',
                   }}>
                     <Clock size={11} strokeWidth={2.4} />
-                    {formatElapsed(status.clockInMs, now)} on the clock
+                    {isTempOut ? 'away ' + formatElapsed(status.clockInMs, now) : formatElapsed(status.clockInMs, now) + ' on the clock'}
                   </div>
+                  {isTempOut && status.reason && (
+                    <div style={{ fontFamily: FB, color: '#a0aec0', fontSize: '11px', fontStyle: 'italic' }}>
+                      {status.reason}
+                    </div>
+                  )}
                 </>
               )}
             </Card>
@@ -493,7 +542,7 @@ export default function Dashboard({ allTasks, isMobile }) {
     return () => clearInterval(t);
   }, []);
 
-  // timeclock/entries — icon-timeclock-8f75a RTDB
+  // punches — icon-timeclock-8f75a RTDB
   useEffect(() => {
     let cancelled = false;
     let unsub = () => {};
