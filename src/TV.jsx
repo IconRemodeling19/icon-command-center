@@ -236,7 +236,7 @@ function TaskCard({ task, scale, today }) {
   const summaryLine = summary || (subCount > 0 ? subCount + ' sub-task' + (subCount === 1 ? '' : 's') + ' pending' : '');
   return (
     <div data-tvcard="1" style={{
-      position: 'relative',
+      position: 'relative', flexShrink: 0,
       background: 'rgba(24,24,27,0.85)',
       border: '1px solid rgba(63,63,70,0.7)',
       borderLeft: '4px solid ' + barColor,
@@ -331,7 +331,7 @@ function PersonColumn({ person, tasks, scale, today, pageSize }) {
       if (!el) return;
       const cards = el.querySelectorAll('[data-tvcard]');
       if (!cards.length) return;
-      cards.forEach((card) => { if (card.offsetHeight > maxCardRef.current) maxCardRef.current = card.offsetHeight; });
+      cards.forEach((card) => { const natural = Math.max(card.offsetHeight, card.scrollHeight); if (natural > maxCardRef.current) maxCardRef.current = natural; });
       const gap = parseFloat(window.getComputedStyle(el).rowGap) || 12;
       const f = Math.max(2, Math.floor((el.clientHeight + gap) / (maxCardRef.current + gap)));
       setFit((prev) => (prev === f ? prev : f));
