@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   db, authReady, ref, onValue,
   timeclockAuthReady, timeclockFs, collection, onSnapshot, query, where, Timestamp,
@@ -236,7 +236,7 @@ function TaskCard({ task, scale, today }) {
   const subCount = Array.isArray(task.subTasks) ? task.subTasks.length : 0;
   const summaryLine = summary || (subCount > 0 ? subCount + ' sub-task' + (subCount === 1 ? '' : 's') + ' pending' : '');
   return (
-    <div style={{
+    <div data-tvcard="1" style={{
       position: 'relative',
       background: 'rgba(24,24,27,0.85)',
       border: '1px solid rgba(63,63,70,0.7)',
@@ -315,9 +315,34 @@ function TaskCard({ task, scale, today }) {
 }
 
 function PersonColumn({ person, tasks, scale, today, pageSize }) {
-  const PAGE_SIZE = pageSize || 10;
+  const HARD_CAP = pageSize || 10;
   const PAGE_MS = 60000;
   const FADE_MS = 400;
+
+  // Measure how many cards actually fit in the column body so no card ever
+  // renders clipped - different TVs report different viewport heights and
+  // zoom levels, so reported innerHeight alone cannot be trusted.
+  const bodyRef = useRef(null);
+  const maxCardRef = useRef(0);
+  const [fit, setFit] = useState(HARD_CAP);
+  useEffect(() => { maxCardRef.current = 0; }, [tasks, scale]);
+  useEffect(() => {
+    const measure = () => {
+      const el = bodyRef.current;
+      if (!el) return;
+      const cards = el.querySelectorAll('[data-tvcard]');
+      if (!cards.length) return;
+      cards.forEach((card) => { if (card.offsetHeight > maxCardRef.current) maxCardRef.current = card.offsetHeight; });
+      const gap = parseFloat(window.getComputedStyle(el).rowGap) || 12;
+      const f = Math.max(2, Math.floor((el.clientHeight + gap) / (maxCardRef.current + gap)));
+      setFit((prev) => (prev === f ? prev : f));
+    };
+    measure();
+    const t = setInterval(measure, 4000);
+    window.addEventListener('resize', measure);
+    return () => { clearInterval(t); window.removeEventListener('resize', measure); };
+  }, [tasks, scale]);
+  const PAGE_SIZE = Math.min(HARD_CAP, fit);
 
   const pages = useMemo(() => {
     if (tasks.length <= PAGE_SIZE) return [tasks];
@@ -382,7 +407,7 @@ function PersonColumn({ person, tasks, scale, today, pageSize }) {
           </span>
         </div>
       </div>
-      <div style={{
+      <div ref={bodyRef} style={{
         flex: 1, minHeight: 0, overflow: 'hidden',
         padding: 'clamp(8px, 0.8vw, 18px)',
         display: 'flex', flexDirection: 'column',
