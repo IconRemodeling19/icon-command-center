@@ -1,3 +1,4 @@
+import { getFirestore, collection, onSnapshot, query, where, Timestamp } from 'firebase/firestore';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, onValue, get, set, update, remove, push } from "firebase/database";
 import { getAuth, signInAnonymously } from "firebase/auth";
@@ -50,6 +51,7 @@ const timeclockConfig = {
 
 const timeclockApp = initializeApp(timeclockConfig, "timeclock");
 const timeclockDb = getDatabase(timeclockApp);
+const timeclockFs = getFirestore(timeclockApp);
 const timeclockAuthReady = Promise.resolve();
 
 export {
@@ -57,4 +59,5 @@ export {
   ref, onValue, get, set, update, remove, push,
   storage, storageRef, uploadBytes, getDownloadURL, deleteObject,
   timeclockDb, timeclockAuthReady,
+  timeclockFs, collection, onSnapshot, query, where, Timestamp,
 };
