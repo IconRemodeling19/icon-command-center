@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Clock, Briefcase, ListChecks, UserCheck } from 'lucide-react';
 import {
   db, authReady, ref, onValue,
-  timeclockDb, timeclockAuthReady,
+  timeclockAuthReady,
+  timeclockFs, collection, onSnapshot, query, where, Timestamp,
 } from './firebase';
 
 const FB = "'Manrope', 'Segoe UI', Arial, sans-serif";
@@ -187,10 +188,14 @@ function CrewStatus({ entries, now, isMobile }) {
     // in-punch so the card still shows where the person will return to.
     const latest = {};
     const latestIn = {};
-    const classify = (action) => {
-      const a = String(action || '').toUpperCase();
-      if (!a) return null;
+    const classify = (e) => {
+      const a = String(e.action || '').toUpperCase();
       if (/TEMP/.test(a)) return 'tempOut';
+      const w = String(e.workdayStatus || '').toLowerCase();
+      if (w === 'ended') return 'out';
+      if (w === 'started' || /closed/.test(w)) return 'in'; // jobNClosed = between jobs
+      if (!a) return null;
+      if (/END JOB|START JOB/.test(a)) return 'in';
       if (/OUT|END/.test(a)) return 'out';
       if (/IN|START/.test(a)) return 'in';
       return null;
@@ -200,18 +205,19 @@ function CrewStatus({ entries, now, isMobile }) {
       if (!name) continue;
       const ts = tsToMs(pick(e, ['timestamp', 'clockIn', 'clockInTime', 'startTime', 'startedAt']));
       if (!ts) continue;
-      const dateField = pick(e, ['date', 'dayDate']) || msToISODate(ts);
+      const rawDate = pick(e, ['date', 'dayDate']);
+      const dateField = isISODate(rawDate) ? rawDate : msToISODate(ts);
       if (dateField !== today) continue;
       const key = name.toLowerCase();
       if (!latest[key] || ts > latest[key].ts) latest[key] = { e, ts, name };
-      if (classify(e.action) === 'in' && (!latestIn[key] || ts > latestIn[key].ts)) {
+      if (classify(e) === 'in' && (!latestIn[key] || ts > latestIn[key].ts)) {
         latestIn[key] = { e, ts };
       }
     }
     const result = {};
     for (const key of Object.keys(latest)) {
       const { e, ts, name } = latest[key];
-      let state = classify(e.action);
+      let state = classify(e);
       if (state == null) {
         // Legacy paired-entry shape: open if no clock-out recorded.
         state = tsToMs(pick(e, ['clockOut', 'clockOutTime', 'endTime', 'endedAt'])) ? 'out' : 'in';
@@ -542,17 +548,22 @@ export default function Dashboard({ allTasks, isMobile }) {
     return () => clearInterval(t);
   }, []);
 
-  // punches — icon-timeclock-8f75a RTDB
+  // punches — icon-timeclock-8f75a Firestore
   useEffect(() => {
     let cancelled = false;
     let unsub = () => {};
     timeclockAuthReady.then(() => {
       if (cancelled) return;
-      const r = ref(timeclockDb, TIMECLOCK_PATH);
-      unsub = onValue(
-        r,
-        (snap) => { if (!cancelled) setEntries(snap.val() || {}); },
-        (err) => console.error('[dashboard] timeclock entries read failed:', err),
+      const dayStart = new Date();
+      dayStart.setHours(0, 0, 0, 0);
+      const q = query(
+        collection(timeclockFs, TIMECLOCK_PATH),
+        where('timestamp', '>=', Timestamp.fromDate(dayStart)),
+      );
+      unsub = onSnapshot(
+        q,
+        (snap) => { if (!cancelled) setEntries(snap.docs.map((d) => d.data())); },
+        (err) => console.error('[dashboard] timeclock punches read failed:', err),
       );
     }).catch((err) => console.error('[dashboard] timeclock auth failed:', err));
     return () => { cancelled = true; unsub(); };
