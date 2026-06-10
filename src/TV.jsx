@@ -160,6 +160,7 @@ return { tier:'XS', title:'clamp(13px,1.4vw,34px)', customer:'clamp(10px,1vw,22p
 
 function LiveClock() {
 const [now, setNow] = useState(new Date());
+  const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 1080);
 useEffect(() => {
 const t = setInterval(() => setNow(new Date()), 1000);
 return () => clearInterval(t);
@@ -313,8 +314,8 @@ function TaskCard({ task, scale, today }) {
   );
 }
 
-function PersonColumn({ person, tasks, scale, today }) {
-  const PAGE_SIZE = 10;
+function PersonColumn({ person, tasks, scale, today, pageSize }) {
+  const PAGE_SIZE = pageSize || 10;
   const PAGE_MS = 60000;
   const FADE_MS = 400;
 
@@ -323,7 +324,7 @@ function PersonColumn({ person, tasks, scale, today }) {
     const out = [];
     for (let i = 0; i < tasks.length; i += PAGE_SIZE) { out.push(tasks.slice(i, i + PAGE_SIZE)); }
     return out;
-  }, [tasks]);
+  }, [tasks, PAGE_SIZE]);
 
   const [pageIdx, setPageIdx] = useState(0);
   const [visible, setVisible] = useState(true);
@@ -482,6 +483,14 @@ export default function TV() {
     return () => clearInterval(t);
   }, []);
 
+  // Cards-per-page adapts to viewport height - the LG webOS browser renders
+  // a shorter viewport than the Pi at 1080p, so fixed 10/page clips there.
+  useEffect(() => {
+    const onResize = () => setVh(window.innerHeight);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
   // commandCenter/tasks - icon-work-orders RTDB
   useEffect(() => {
     let cancelled = false; let unsub = () => {};
@@ -568,6 +577,7 @@ export default function TV() {
   const doneToday = useMemo(() => allTasks.filter((t) => (t.status || 'open') === 'done' && t.completedAt && msToISODate(tsToMs(t.completedAt)) === today).length, [allTasks, today]);
   const scale = useMemo(() => scaleFor(totalOpen), [totalOpen]);
   const crewState = useMemo(() => crewStateByName(punches, today), [punches, today]);
+  const pageSize = vh >= 980 ? 10 : vh >= 800 ? 8 : vh >= 640 ? 6 : 5;
 
   return (
     <div style={{
@@ -616,7 +626,7 @@ export default function TV() {
         overflow: 'hidden',
       }}>
         {TEAM.map((p) => (
-          <PersonColumn key={p.id} person={p} tasks={tasksByPerson[p.id] || []} scale={scale} today={today} />
+          <PersonColumn key={p.id} person={p} tasks={tasksByPerson[p.id] || []} scale={scale} today={today} pageSize={pageSize} />
         ))}
       </main>
       <CrewTicker crewState={crewState} nowMs={now.getTime()} />
