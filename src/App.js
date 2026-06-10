@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Phone, FileText, Building2, DollarSign, Hammer, ClipboardCheck,
   Plus, X, Check, Trash2, AlertTriangle, Hash, ArrowLeft, MapPin,
-  ChevronLeft, ChevronRight, ChevronDown, Edit2, Paperclip, Upload, Calendar,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronsDown, ChevronsUp, Edit2, Paperclip, Upload, Calendar,
   ClipboardList, Users,
 } from 'lucide-react';
 import {
@@ -241,9 +241,12 @@ function SubTaskRow({ subTask, onToggle }) {
   );
 }
 
-function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
+function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes, subTasksCmd }) {
   const [hov, setHov] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  useEffect(() => {
+    if (subTasksCmd) setExpanded(subTasksCmd.open);
+  }, [subTasksCmd]);
   const cat = CATEGORIES[task.category] || CATEGORIES.customer;
   const pri = PRIORITIES[task.priority] || PRIORITIES.medium;
   const Icon = cat.icon;
@@ -369,25 +372,14 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
           </div>
         )}
 
-        {/* Sub-tasks: collapsed → summary; expanded → full checklist */}
+        {/* Sub-tasks: collapsed → compact count; expanded → full checklist */}
         {subTasks.length > 0 && !expanded && (
           <div style={{
-            marginBottom: '10px', padding: '8px',
-            background: 'rgba(9,9,11,0.55)', border: '1px solid #3d4557', borderRadius: '6px',
+            display: 'flex', alignItems: 'center', gap: '6px',
+            marginBottom: '10px', fontSize: '12px', color: '#a0aec0', fontFamily: FB,
           }}>
-            <div style={{
-              fontSize: '10px', fontWeight: 700, color: '#a0aec0',
-              textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: FB,
-              marginBottom: '6px',
-            }}>
-              Sub-Task Summary
-            </div>
-            <div style={{
-              fontSize: '12px', color: '#ffffff', lineHeight: 1.4, fontFamily: FB,
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            }}>
-              {task.subTaskSummary || `↳ ${subTasks.length} sub-task${subTasks.length === 1 ? '' : 's'}`}
-            </div>
+            <ChevronRight size={12} color="#a0aec0" />
+            {subTasks.length} sub-task{subTasks.length === 1 ? '' : 's'} · {doneCount} done
           </div>
         )}
         {subTasks.length > 0 && expanded && (
@@ -452,6 +444,7 @@ function PersonColumn({
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickText, setQuickText] = useState('');
   const quickInputRef = useRef(null);
+  const [subTasksCmd, setSubTasksCmd] = useState(null);
 
   useEffect(() => {
     if (quickOpen && quickInputRef.current) quickInputRef.current.focus();
@@ -620,6 +613,32 @@ function PersonColumn({
           >
             ✓ {doneCount} done
           </button>
+          <button
+            onClick={() => setSubTasksCmd({ open: true, n: Date.now() })}
+            title="Expand all sub-tasks"
+            style={{
+              padding: '4px 9px', background: 'transparent',
+              border: '1px solid #3d4557', borderRadius: '4px',
+              fontSize: '11px', fontWeight: 700, color: '#a0aec0',
+              letterSpacing: '0.05em', fontFamily: FB, cursor: 'pointer',
+              minHeight: '28px', display: 'inline-flex', alignItems: 'center', gap: '4px',
+            }}
+          >
+            <ChevronsDown size={12} /> Expand all
+          </button>
+          <button
+            onClick={() => setSubTasksCmd({ open: false, n: Date.now() })}
+            title="Collapse all sub-tasks"
+            style={{
+              padding: '4px 9px', background: 'transparent',
+              border: '1px solid #3d4557', borderRadius: '4px',
+              fontSize: '11px', fontWeight: 700, color: '#a0aec0',
+              letterSpacing: '0.05em', fontFamily: FB, cursor: 'pointer',
+              minHeight: '28px', display: 'inline-flex', alignItems: 'center', gap: '4px',
+            }}
+          >
+            <ChevronsUp size={12} /> Collapse all
+          </button>
         </div>
       </div>
 
@@ -645,6 +664,7 @@ function PersonColumn({
                 onComplete={onComplete}
                 onToggleSubTask={onToggleSubTask}
                 onShowNotes={onShowNotes}
+                subTasksCmd={subTasksCmd}
               />
             ))
           )}
