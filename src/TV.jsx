@@ -160,7 +160,6 @@ return { tier:'XS', title:'clamp(13px,1.4vw,34px)', customer:'clamp(10px,1vw,22p
 
 function LiveClock() {
 const [now, setNow] = useState(new Date());
-  const [vh, setVh] = useState(typeof window !== 'undefined' ? window.innerHeight : 1080);
 useEffect(() => {
 const t = setInterval(() => setNow(new Date()), 1000);
 return () => clearInterval(t);
@@ -508,14 +507,6 @@ export default function TV() {
     return () => clearInterval(t);
   }, []);
 
-  // Cards-per-page adapts to viewport height - the LG webOS browser renders
-  // a shorter viewport than the Pi at 1080p, so fixed 10/page clips there.
-  useEffect(() => {
-    const onResize = () => setVh(window.innerHeight);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
   // commandCenter/tasks - icon-work-orders RTDB
   useEffect(() => {
     let cancelled = false; let unsub = () => {};
@@ -602,7 +593,7 @@ export default function TV() {
   const doneToday = useMemo(() => allTasks.filter((t) => (t.status || 'open') === 'done' && t.completedAt && msToISODate(tsToMs(t.completedAt)) === today).length, [allTasks, today]);
   const scale = useMemo(() => scaleFor(totalOpen), [totalOpen]);
   const crewState = useMemo(() => crewStateByName(punches, today), [punches, today]);
-  const pageSize = vh >= 980 ? 10 : vh >= 800 ? 8 : vh >= 640 ? 6 : 5;
+  const pageSize = 10;
 
   return (
     <div style={{
