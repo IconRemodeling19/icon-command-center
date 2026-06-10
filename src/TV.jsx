@@ -239,7 +239,7 @@ flex: 1, minHeight: 0, overflow: 'hidden',
 padding: 'clamp(8px, 0.8vw, 18px)',
 display: 'flex', flexDirection: 'column',
 gap: scale.cardGap,
-justifyContent: currentTasks.length > 0 && currentTasks.length <= 3 ? 'space-evenly' : 'flex-start',
+justifyContent: 'flex-start',
 opacity: visible ? 1 : 0,
 transition: 'opacity 0.4s ease',
 }}>
