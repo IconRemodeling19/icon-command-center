@@ -118,7 +118,7 @@ const isDueWithinNextDay = (s) => {
   return /today|tomorrow|friday|thu/i.test(s || '');
 };
 
-const dateSortKey = (s) => isISODate(s) ? s : '9999-12-31'; // legacy sinks to bottom
+const dateSortKey = (s) => isISODate(s) ? s : '9999-12-31'; const isOverdue = (t) => { if ((t.status || 'open') === 'done') return false; return isISODate(t.dueDate) && t.dueDate < todayISO(); }; const overdueDays = (t) => { if (!isOverdue(t)) return 0; const d = new Date(t.dueDate + 'T00:00:00'); const today = new Date(); today.setHours(0, 0, 0, 0); return Math.round((today - d) / 86400000); }; const taskAgeDays = (t) => { if (!t.createdAt) return 0; return Math.max(0, Math.floor((new Date() - new Date(t.createdAt)) / 86400000)); }; const isStale = (t) => !isISODate(t.dueDate) && taskAgeDays(t) >= 7;
 
 // ─── Fonts ─────────────────────────────────────────────────────────────────────
 
@@ -247,7 +247,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
   const cat = CATEGORIES[task.category] || CATEGORIES.customer;
   const pri = PRIORITIES[task.priority] || PRIORITIES.medium;
   const Icon = cat.icon;
-  const isToday = isDueToday(task.dueDate);
+  const isToday = isDueToday(task.dueDate); const __od = isOverdue(task); const __odDays = overdueDays(task); const __age = taskAgeDays(task); const __stale = isStale(task);
   const subTasks = task.subTasks || [];
   const doneCount = subTasks.filter(s => s.completed).length;
   const hasNotes = !!(task.completionNotes && task.completionNotes.trim());
@@ -270,8 +270,8 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
       {/* Priority bar */}
       <div style={{
         position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px',
-        background: pri.bar,
-        animation: pri.pulse ? 'iconPulse 2s ease-in-out infinite' : 'none',
+        background: __od ? '#ef4444' : pri.bar,
+        animation: (pri.pulse || __odDays >= 3) ? 'iconPulse 2s ease-in-out infinite' : 'none',
       }} />
 
       <div style={{ paddingLeft: '16px', paddingRight: '12px', paddingTop: '12px', paddingBottom: '12px' }}>
@@ -281,7 +281,7 @@ function TaskCard({ task, onEdit, onComplete, onToggleSubTask, onShowNotes }) {
             <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', color: pri.text, fontFamily: FD }}>
               {pri.label}
             </span>
-            {pri.pulse && <AlertTriangle size={11} color={pri.text} />}
+            {pri.pulse && <AlertTriangle size={11} color={pri.text} />}{__od && <span style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', color: '#f87171', fontFamily: FD, border: '1px solid rgba(239,68,68,0.45)', borderRadius: '4px', padding: '1px 5px', background: 'rgba(239,68,68,0.12)' }}>{'OVERDUE ' + __odDays + 'D'}</span>}{!__od && __stale && <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#fbbf24', fontFamily: FD, border: '1px solid rgba(245,158,11,0.4)', borderRadius: '4px', padding: '1px 5px', background: 'rgba(245,158,11,0.1)' }}>{__age + 'D OLD'}</span>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             <button
@@ -2388,7 +2388,7 @@ export default function IconCommandCenter() {
   // Stats
   const stats = useMemo(() => ({
     urgent: openTasks.filter(t => t.priority === 'urgent').length,
-    today:  openTasks.filter(t => isDueWithinNextDay(t.dueDate)).length,
+    today:  openTasks.filter(t => isDueWithinNextDay(t.dueDate)).length, overdue: openTasks.filter(t => isOverdue(t)).length,
     total:  openTasks.length,
   }), [openTasks]);
 
@@ -2404,7 +2404,7 @@ export default function IconCommandCenter() {
         .filter(t => getAssignees(t).includes(p.id))
         .slice()
         .sort((a, b) => {
-          const pdiff = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
+          const av = isOverdue(a) ? overdueDays(a) : -1; const bv = isOverdue(b) ? overdueDays(b) : -1; if (av !== bv) return bv - av; const pdiff = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
           if (pdiff !== 0) return pdiff;
           return dateSortKey(a.dueDate).localeCompare(dateSortKey(b.dueDate));
         });
@@ -2742,7 +2742,7 @@ export default function IconCommandCenter() {
           {/* Stats row */}
           <div className="cc-stats" style={{ display: 'flex', alignItems: 'center' }}>
             <StatBlock label="Urgent"     value={stats.urgent}   tone="red"     />
-            <StatBlock label="Due Soon"   value={stats.today}    tone="amber"   />
+            <StatBlock label="Overdue"    value={stats.overdue}  tone="red"     /><StatBlock label="Due Soon"   value={stats.today}    tone="amber"   />
             <StatBlock label="Total Open" value={stats.total}    tone="zinc"    />
             <StatBlock label="Done Today" value={doneTodayTotal} tone="emerald" />
           </div>
