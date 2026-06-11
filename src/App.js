@@ -2735,7 +2735,7 @@ export default function IconCommandCenter() {
 
       {/* ── HEADER ── */}
       <header style={{
-        position: 'relative', borderBottom: '1px solid #3d4557',
+        position: 'relative', borderBottom: '3px solid #E8192C',
         background: 'linear-gradient(to bottom, #1a1f2e, #0a0a0f)', flexShrink: 0,
       }}>
         <div className="cc-header-row" style={{ padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
@@ -2743,17 +2743,17 @@ export default function IconCommandCenter() {
           {/* Brand mark */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
-              width: '48px', height: '48px', background: '#fbbf24', flexShrink: 0,
+              width: '48px', height: '48px', background: '#E8192C', flexShrink: 0,
               clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: '#0a0a0f', fontWeight: 700, fontSize: '24px', fontFamily: FD }}>I</span>
+              <span style={{ color: '#ffffff', fontWeight: 700, fontSize: '24px', fontFamily: FD }}>I</span>
             </div>
             <div>
               <div style={{ fontSize: '1.65rem', fontWeight: 700, color: '#ffffff', letterSpacing: '0.04em', fontFamily: FD, lineHeight: 1 }}>
                 ICON REMODELING GROUP
               </div>
-              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(251,191,36,0.85)', marginTop: '5px', fontFamily: FB }}>
+              <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(232,25,44,0.95)', textShadow: '0 0 12px rgba(232,25,44,0.4)', marginTop: '5px', fontFamily: FB }}>
                 Icon Office Board
               </div>
             </div>
