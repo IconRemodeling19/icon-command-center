@@ -358,8 +358,13 @@ function ActiveJobsToday({ orders, isMobile }) {
         }}>
           {todays.map((o) => {
             const crew = pick(o, ['crew', 'crewName', 'team', 'teamName']);
-            const address = pick(o, ['address', 'jobAddress', 'siteAddress', 'location']);
-            const customer = pick(o, ['customerName', 'customer', 'clientName', 'client']);
+            // Multi-job work orders store address/customer inside jobs[0],
+            // not at the top level - check there first.
+            const firstJob = Array.isArray(o.jobs) && o.jobs.length > 0 ? o.jobs[0] : null;
+            const extraJobs = Array.isArray(o.jobs) ? o.jobs.length - 1 : 0;
+            const baseAddress = (firstJob && (firstJob.jobAddress || firstJob.address)) || pick(o, ['address', 'jobAddress', 'siteAddress', 'location']);
+            const address = baseAddress && extraJobs > 0 ? baseAddress + ' (+' + extraJobs + ' more)' : baseAddress;
+            const customer = (firstJob && firstJob.customerName) || pick(o, ['customerName', 'customer', 'clientName', 'client']);
             const membersRaw = pick(o, ['assignedMembers', 'members', 'assignees', 'crewMembers']);
             const members = Array.isArray(membersRaw)
               ? membersRaw
